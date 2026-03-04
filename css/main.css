@@ -381,7 +381,7 @@ button:disabled {
 
 .canvas-content {
     position: relative;
-    display: inline-block;
+    display: none;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
     background: #fff;
     transform-origin: top center;

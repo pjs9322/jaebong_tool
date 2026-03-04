@@ -83,7 +83,7 @@ export function initViewer() {
                     </div>
                     <div class="view-add-req"><strong>💡 추가 요청사항:</strong><br>${h.desc || "없음"}</div>
                 </div>
-                <div class="view-img-col"><img src="${h.full}"></div>
+                ${h.full ? `<div class="view-img-col"><img src="${h.full}"></div>` : ''}
             `;
             UI.viewContentArea.appendChild(div);
         });

@@ -33,30 +33,45 @@ export function initPdfExport() {
         for (let i = 0; i < S.history.length; i++) {
             const h = S.history[i];
             if (i > 0) doc.addPage();
-            const memos = h.annos.map((a, idx) => `<div style="margin-bottom:6px;"><strong>[${idx + 1}]</strong> ${a.text}</div>`).join('');
+            const memos = h.annos.map((a, idx) => `<div style="margin-bottom:8px; font-size:14px; line-height:1.6; display:flex; gap:8px;"><div style="font-weight:800; color:var(--action-pink); min-width:20px; color:#f43f5e;">[${idx + 1}]</div><div>${a.text}</div></div>`).join('');
 
             let basicInfo = '';
             if (i === 0) basicInfo = `
-                <div style="margin-bottom:30px; border:1px solid #000; padding:20px; display:flex; gap:20px;">
+                <div style="margin-bottom:30px; border:1px solid #e5e7eb; background:#f9fafb; padding:20px; border-radius:8px; display:flex; gap:20px;">
                     <div style="flex:1;"><strong>[의뢰인 정보]</strong><br>업체명 : 컴퓨타수선집<br>담당자 : 박준성</div>
                     <div style="flex:1;"><strong>[홈페이지 정보]</strong><br>URL : ${h.url || '-'}<br>호스팅 : AWS</div>
                 </div>`;
 
             tempDiv.innerHTML = `
-                <div style="padding:40px; font-family:sans-serif;">
-                    <h1 style="border-bottom:2px solid #000; padding-bottom:10px;">유지보수 의뢰서 (${i + 1}/${S.history.length})</h1>
+                <div style="padding:40px; font-family:-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;">
+                    <div style="border-bottom:2px solid #111; padding-bottom:10px; margin-bottom: 20px;">
+                        <h1 style="font-size: 28px; font-weight: 900; letter-spacing:-1px; margin:0 0 8px 0;">홈페이지 유지보수 의뢰서</h1>
+                        <div style="font-size:14px; color:#666;">페이지 (${i + 1}/${S.history.length}) · 작성일: ${new Date().toLocaleDateString()}</div>
+                    </div>
                     ${basicInfo}
-                    <div style="display:flex; gap:20px; margin-top:20px;">
-                        <div style="flex:1;">
-                            <div style="background:#eee; padding:10px; font-weight:bold; margin-bottom:10px;">${catMap[h.category]}</div>
-                            <div><strong>URL:</strong> ${h.url}</div>
-                            <div style="margin-top:10px;">${memos}</div>
-                            <div style="margin-top:20px; border-top:1px dashed #ccc; padding-top:10px;"><strong>추가 요청:</strong> ${h.desc}</div>
+                    <div style="display:flex; gap:30px; border-bottom:1px solid #eee; padding-bottom:40px; margin-bottom:10px;">
+                        <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="font-size:12px; font-weight:800; color:#fff; background:#111; padding:6px 12px; border-radius:4px;">#${i + 1}. ${catMap[h.category].split(' ').slice(1).join(' ')}</span>
+                            </div>
+                            <div style="font-size:13px; color:#555; background:#f3f4f6; padding:10px; border-radius:6px; display:flex; align-items:center; gap:8px;">
+                                <span>🔗</span> <span style="font-weight:600; color:#000;">${h.url || 'URL 없음'}</span>
+                            </div>
+                            <div style="background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.02)">
+                                <div style="font-size:12px; font-weight:800; color:#888; margin-bottom:10px;">상세 메모</div>
+                                ${memos || '<div style="color:#aaa; font-size:14px;">등록된 메모가 없습니다.</div>'}
+                            </div>
+                            <div style="margin-top:10px; font-size:14px; color:#333; background:#fff1f2; padding:16px; border-radius:8px; border:1px solid #fecdd3;">
+                                <strong>💡 추가 요청사항:</strong><br>${h.desc || "없음"}
+                            </div>
                         </div>
-                        <div style="width:340px; text-align:right;">
-                            <img src="${h.full}" style="max-width:100%; border:1px solid #ccc;">
-                            <div style="margin-top:10px;"><img src="${getQrBase64(h.url)}" width="50"></div>
-                        </div>
+                        ${h.full ? `
+                        <div style="width:400px; flex-shrink:0;">
+                            <div style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden; background:#000; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                                <img src="${h.full}" style="width:100%; display:block;">
+                            </div>
+                            <div style="margin-top:10px; text-align:right;"><img src="${getQrBase64(h.url)}" width="50" style="padding:6px; background:#fff; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.15)"></div>
+                        </div>` : ''}
                     </div>
                 </div>`;
 

@@ -9,6 +9,7 @@ import { render, resetMemoPanel, updateAnnoListUI, generateQR } from '../core/ca
 
 export function updateZoomMode() {
     if (!S.img) return;
+    UI.cWrap.style.display = 'inline-block';
     if (S.isFitMode) {
         UI.cWrap.style.width = '100%';
         UI.cWrap.style.height = 'auto';
@@ -31,7 +32,7 @@ export function loadImage(src, onLoadCallback) {
         S.baseImgSrc = src;
         UI.canvas.width = S.w;
         UI.canvas.height = S.h;
-        S.isFitMode = false;
+        S.isFitMode = true;
         updateZoomMode();
         UI.saveReqBtn.disabled = false;
         if (onLoadCallback) {
@@ -52,8 +53,18 @@ export function loadImage(src, onLoadCallback) {
 }
 
 export function initImageLoader() {
+    const checkUnsavedChanges = () => {
+        const isEditing = S.editingHistoryId !== null;
+        const hasDraft = (S.img && UI.cWrap.style.display !== 'none') || S.annos.length > 0 || UI.reqDesc.value !== '';
+        if ((isEditing || hasDraft) && !confirm("저장하지 않은 내용은 사라집니다. 계속하시겠습니까?")) {
+            return false;
+        }
+        return true;
+    };
+
     // --- Capture & Load ---
     UI.btnScreenCapture.onclick = async () => {
+        if (!checkUnsavedChanges()) return;
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
             const video = document.createElement('video');
@@ -78,7 +89,10 @@ export function initImageLoader() {
     UI.btnZoom.onclick = () => { S.isFitMode = !S.isFitMode; updateZoomMode(); };
     window.addEventListener('resize', () => { if (S.isFitMode) updateZoomMode(); });
 
-    UI.btnOpenImg.onclick = () => UI.fileIn.click();
+    UI.btnOpenImg.onclick = () => {
+        if (!checkUnsavedChanges()) return;
+        UI.fileIn.click();
+    };
     UI.fileIn.onchange = (e) => {
         const f = e.target.files[0];
         if (!f) return;
@@ -91,6 +105,7 @@ export function initImageLoader() {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
+                if (!checkUnsavedChanges()) return;
                 const f = items[i].getAsFile();
                 const r = new FileReader();
                 r.onload = (ev) => loadImage(ev.target.result);

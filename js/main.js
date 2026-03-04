@@ -31,6 +31,7 @@ function startup() {
     function showTutorial(idx) {
         if (idx >= steps.length) {
             UI.tutOverlay.style.display = 'none';
+            localStorage.setItem('tutorialSeen', 'true');
             return;
         }
         UI.tutOverlay.style.display = 'block';
@@ -54,7 +55,9 @@ function startup() {
         UI.tutCard.style.top = cardTop + 'px';
     }
 
-    setTimeout(() => showTutorial(0), 500);
+    if (localStorage.getItem('tutorialSeen') !== 'true') {
+        setTimeout(() => showTutorial(0), 500);
+    }
     UI.tutNext.onclick = () => showTutorial(++S.tutIndex);
 
 }
