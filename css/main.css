@@ -1,0 +1,599 @@
+/* ✨ 디자인 시스템: Card Layout + Black/Pink Theme */
+:root {
+    --bg: #f3f4f6;
+    /* 전체 배경 (쿨그레이) */
+    --card-bg: #ffffff;
+    /* 카드 배경 */
+    --bd: #e5e7eb;
+    /* 테두리 */
+    --text: #111827;
+    /* 메인 텍스트 */
+    --text-muted: #6b7280;
+
+    --primary: #000000;
+    /* 메인 블랙 */
+    --mint-bg: #d1fae5;
+    /* 카테고리 배경 민트 */
+    --action-pink: #f43f5e;
+    /* 포인트 핑크 */
+
+    /* 💡 카드형 디자인을 위한 깊은 그림자 */
+    --shadow-card: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* --- Top Bar --- */
+.topbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    background: #fff;
+    z-index: 20;
+    border-bottom: 1px solid var(--bd);
+    flex-shrink: 0;
+    /* 높이 고정 */
+}
+
+.logo-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 900;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+}
+
+.logo-area img {
+    width: 250px;
+}
+
+.logo-area .beta01 {
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: var(--action-pink);
+    font-weight: 700;
+    font-size: 16px;
+    transform: translate(50%, -25%);
+}
+
+.top-msg {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.top-btns {
+    display: flex;
+    gap: 8px;
+}
+
+/* --- LAYERS --- */
+.layer {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+}
+
+.layer.active {
+    display: flex;
+}
+
+/* --- 💡 WORKSPACE: CARD LAYOUT --- */
+.workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr 340px;
+    /* 3단 컬럼 */
+    gap: 20px;
+    /* 💡 카드 사이의 간격 */
+    padding: 24px;
+    /* 💡 전체 화면 테두리 여백 */
+    overflow: hidden;
+    background: var(--bg);
+}
+
+/* 💡 독립된 카드 패널 스타일 */
+.col {
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border-radius: 16px;
+    /* 둥근 모서리 */
+    box-shadow: var(--shadow-card);
+    /* 붕 떠있는 그림자 효과 */
+    border: 1px solid var(--bd);
+    overflow: hidden;
+}
+
+.col-hd {
+    padding: 0 20px;
+    height: 56px;
+    border-bottom: 1px solid var(--bd);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+/* 단계 뱃지 */
+.step-badge {
+    font-size: 10px;
+    font-weight: 800;
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-right: 8px;
+    letter-spacing: 0.5px;
+}
+
+.col-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.col-bd {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* --- Buttons --- */
+button {
+    cursor: pointer;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 6px;
+    transition: all 0.2s;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-std {
+    background: #f3f4f6;
+    color: #333;
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+}
+
+.btn-std:hover:not(:disabled) {
+    background: #e5e7eb;
+}
+
+.btn-black {
+    background: var(--primary);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+}
+
+.btn-black:hover:not(:disabled) {
+    background: #333;
+}
+
+.btn-pink {
+    background: var(--action-pink);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 6px;
+    width: 100%;
+    font-size: 14px;
+}
+
+.btn-pink:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.btn-blue {
+    background: #3b82f6;
+    color: #fff;
+    padding: 10px 20px;
+}
+
+/* --- Left Column (Upload) --- */
+.btn-capture {
+    width: 100%;
+    padding: 24px;
+    border: 2px dashed #d1d5db;
+    background: #f9fafb;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 800;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-capture:hover {
+    background: #eff6ff;
+    border-color: var(--primary);
+}
+
+.req-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transform: scale(0.99);
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.req-card:hover {
+    border-color: var(--primary);
+    transform: scale(1);
+}
+
+.req-card.editing {
+    border: 2px solid var(--action-pink);
+    background: #fff1f2;
+}
+
+.req-card img {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+}
+
+.tag {
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #555;
+    font-weight: 700;
+    border: 1px solid #e5e7eb;
+}
+
+/* --- Center Column (Canvas) --- */
+.canvas-controls {
+    padding: 20px;
+    border-bottom: 1px solid var(--bd);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #fff;
+}
+
+.input-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.url-input {
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--bd);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: 0.2s;
+}
+
+.url-input:focus {
+    border-color: var(--primary);
+}
+
+.cat-wrapper {
+    padding: 8px;
+    background: var(--bg);
+    border-radius: 10px;
+}
+
+.cat-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.cat-btn {
+    background: var(--primary);
+    color: #fff;
+    padding: 5px 0;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.2;
+    transition: 0.2s;
+}
+
+.cat-btn:hover {
+    opacity: 0.5;
+}
+
+.cat-btn.active {
+    opacity: 1;
+    transform: scale(1.02);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.cat-icon {
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.canvas-area-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #e5e7eb;
+    overflow: hidden;
+    position: relative;
+}
+
+.canvas-scroll-container {
+    flex: 1;
+    overflow: auto;
+    display: block;
+    padding: 40px;
+    cursor: crosshair;
+    text-align: center;
+}
+
+.canvas-content {
+    position: relative;
+    display: inline-block;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    background: #fff;
+    transform-origin: top center;
+    border-radius: 4px;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* Center Footer */
+.center-footer {
+    padding: 20px;
+    background: #fff;
+    border-top: 1px solid var(--bd);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.desc-input {
+    width: 100%;
+    height: 60px;
+    background: #f9fafb;
+    border: 1px solid var(--bd);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+}
+
+.desc-input:focus {
+    border-color: var(--primary);
+    background: #fff;
+}
+
+.center-action-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* --- Right Column (Memo) --- */
+.guide-box {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+    border: 1px dashed var(--bd);
+    border-radius: 12px;
+    background: #f9fafb;
+}
+
+.memo-panel {
+    background: #fff;
+    border: 2px solid var(--primary);
+    padding: 20px;
+    border-radius: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    animation: slideUp 0.2s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.memo-panel.active {
+    display: flex;
+}
+
+.memo-input {
+    width: 100%;
+    height: 100px;
+    background: #f9fafb;
+    border: 1px solid var(--bd);
+    padding: 12px;
+    border-radius: 8px;
+    resize: none;
+    font-size: 13px;
+    outline: none;
+}
+
+.memo-input:focus {
+    border-color: var(--primary);
+    background: #fff;
+}
+
+.anno-list-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.anno-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    transform: scale(0.99);
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.anno-item:hover {
+    border-color: var(--primary);
+    transform: scale(1);
+}
+
+.anno-item.selected {
+    border-color: var(--action-pink);
+    background: #fff1f2;
+}
+
+.anno-badge {
+    background: var(--primary);
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.qr-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 6px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    pointer-events: none;
+    display: none;
+}
+
+.qr-overlay img {
+    display: block;
+    width: 80px;
+    height: 80px;
+}
+
+/* --- TUTORIAL OVERLAY --- */
+#tutorialOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: none;
+}
+
+.tut-spotlight {
+    position: absolute;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+    transition: all 0.4s ease;
+    pointer-events: none;
+    border: 2px solid var(--action-pink);
+}
+
+.tut-card {
+    position: absolute;
+    width: 320px;
+    background: #fff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    transition: all 0.4s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tut-step {
+    color: var(--action-pink);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.tut-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 0;
+}
+
+.tut-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.tut-btn {
+    align-self: flex-end;
+    background: var(--primary);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+}

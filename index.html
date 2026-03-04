@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>재봉툴 PRO v13 · Card Layout Final</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/viewer.css">
+</head>
+
+<body>
+
+    <div class="topbar">
+        <div class="logo-area">
+            <img src="/jaebong_v2/assets/img/logo01.png" alt="">
+            <div class="beta01">Beta</div>
+        </div>
+        <div class="top-msg">“홈페이지 유지보수 의뢰서 생성 AI 어시스턴트”</div>
+        <div class="top-btns">
+            <div id="editorBtns" style="display:flex; gap:8px;">
+                <button class="btn-std" onclick="location.reload()">처음으로 (초기화)</button>
+                <button class="btn-black" id="exportBtn" disabled>PDF 다운로드</button>
+                <button class="btn-blue" id="shareLinkBtn" disabled>🔗 웹 링크 생성 (공유)</button>
+            </div>
+
+            <div id="viewerBtns" style="display:none; gap:8px;">
+                <button class="btn-std" id="backToEditBtn">✎ 편집 모드로 돌아가기</button>
+                <button class="btn-black" onclick="alert('링크가 클립보드에 복사되었습니다!');">🔗 공유 링크 복사</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="layer active" id="editorLayer">
+        <div class="workspace">
+            <div class="col" id="step1Panel">
+                <div class="col-hd">
+                    <div><span class="step-badge">STEP 01</span><span class="col-title">이미지 가져오기</span></div>
+                </div>
+                <div class="col-bd">
+                    <button class="btn-capture" id="btnScreenCapture">
+                        📸 내 홈페이지 화면 캡처
+                        <span style="font-weight:normal; color:#aaa; font-size:11px;">(클릭 후 브라우저 탭 선택)</span>
+                    </button>
+
+                    <div style="display:flex; align-items:center; gap:8px; margin: 10px 0; font-size:11px; color:#aaa;">
+                        <hr style="flex:1; border:0; border-top:1px solid #eee;">또는
+                        <hr style="flex:1; border:0; border-top:1px solid #eee;">
+                    </div>
+
+                    <button class="btn-std" id="btnOpenImg"
+                        style="width:100%; border:1px solid #ddd; background:#fff; padding:14px;">📂 파일 열기 /
+                        Ctrl+V</button>
+                    <input type="file" id="fileIn" accept="image/*" style="display:none">
+
+                    <div style="margin-top:24px;">
+                        <div
+                            style="font-size:12px; font-weight:800; color:var(--action-pink); margin-bottom:8px; display:flex; justify-content:space-between; border-bottom:2px solid #eee; padding-bottom:6px;">
+                            <span>요청사항 리스트</span>
+                            <span id="queueCount">0건</span>
+                        </div>
+                        <div style="flex: 1; overflow-y: auto;" id="reqList">
+                            <div style="text-align:center; padding:30px 10px; color:#9ca3af; font-size:12px;">등록된 요청사항이
+                                없습니다.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col" id="step2Panel">
+                <div class="col-hd">
+                    <div><span class="step-badge">STEP 02</span><span class="col-title">WORK CANVAS</span></div>
+                </div>
+                <div class="canvas-controls">
+                    <div>
+                        <span class="input-label">Page URL (QR코드 자동 생성)</span>
+                        <input type="text" class="url-input" id="urlIn"
+                            placeholder="수정할 페이지의 주소를 입력해주세요 (예: https://...)">
+                    </div>
+
+                    <div>
+                        <span class="input-label">요청사항 카테고리</span>
+                        <div class="cat-wrapper">
+                            <div class="cat-bar">
+                                <button class="cat-btn active" data-val="text">
+                                    <span class="cat-icon">📝</span>내용 수정 (이미지&타이포)
+                                </button>
+                                <button class="cat-btn" data-val="layout">
+                                    <span class="cat-icon">📐</span>항목 추가
+                                </button>
+                                <button class="cat-btn" data-val="func">
+                                    <span class="cat-icon">🛠️</span>기능 수정
+                                </button>
+                                <button class="cat-btn" data-val="image">
+                                    <span class="cat-icon">✨</span>기능 개발
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="canvas-area-wrapper">
+                    <div class="canvas-scroll-container" id="scrollContainer">
+                        <div class="canvas-content" id="canvasWrapper">
+                            <canvas id="mainCanvas"></canvas>
+                            <div id="qrVis" class="qr-overlay"></div>
+                        </div>
+                    </div>
+
+                    <div class="center-footer">
+                        <textarea id="reqDesc" class="desc-input"
+                            placeholder="이 페이지에 대한 전체적인 추가 요청사항을 입력하세요..."></textarea>
+
+                        <div class="center-action-row">
+                            <button class="btn-std" id="toggleZoomBtn"
+                                style="background:#fff; border:1px solid #ddd;">🔍 100% /
+                                화면맞춤</button>
+
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-std" id="cancelEditBtn"
+                                    style="display:none; background:#fee2e2; color:var(--danger); border:none;">수정
+                                    취소</button>
+                                <button class="btn-pink" id="saveReqBtn" disabled>목록에 추가하기 ➝</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col" id="step3Panel">
+                <div class="col-hd">
+                    <div><span class="step-badge">STEP 03</span><span class="col-title">수정사항 메모 생성</span></div>
+                </div>
+
+                <div class="col-bd">
+                    <div class="guide-box" id="guideText">
+                        <b>캔버스</b>에서 수정하고 싶은 부분을<br>마우스로 드래그하여 박스를 그려주세요.<br><br>
+                        <span style="font-size:11px; color:var(--action-pink);">(박스를 클릭하면 다시 수정할 수 있습니다)</span>
+                    </div>
+
+                    <div class="memo-panel" id="memoPanel">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-weight:800; font-size:13px;" id="memoPanelTitle">선택 영역 메모</span>
+                            <button style="background:transparent; color:#ef4444; font-size:11px;" id="deleteMemoBtn"
+                                style="display:none;">삭제</button>
+                        </div>
+
+                        <textarea id="memoInput" class="memo-input" placeholder="선택 영역에 대한 전/후 내용을 설명해주세요.
+예시) 고객센터 -> 고객문의로 변경해주세요."></textarea>
+
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button class="btn-std" id="cancelMemoBtn" style="flex:1;">취소</button>
+                            <button class="btn-black" id="confirmMemoBtn" style="flex:2;">확인</button>
+                        </div>
+                    </div>
+
+                    <div class="anno-list-container" id="annoList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="layer" id="viewerLayer">
+        <div class="viewer-layout">
+            <div class="view-main">
+                <div class="view-paper" id="viewPaper">
+                    <div class="paper-header">
+                        <div>
+                            <div class="paper-title">웹사이트 유지보수 의뢰서</div>
+                            <div class="paper-sub">작성일: <span id="viewDate">-</span> | 작성자: Client (Guest)</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:11px; color:#888; margin-bottom:4px;">의뢰 번호</div>
+                            <div style="font-weight:800; font-size:14px;">#JB-2026-001</div>
+                        </div>
+                    </div>
+
+                    <div id="viewContentArea">
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-sidebar">
+                <div class="chat-header">💬 프로젝트 소통 (History)</div>
+                <div class="chat-body" id="chatList">
+                    <div class="chat-bubble">
+                        <div class="chat-meta">System • 14:00</div>
+                        <div class="chat-text" style="background:#f3f4f6; color:#555;">의뢰서가 생성되었습니다.</div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <textarea class="chat-input" id="chatInput" placeholder="댓글 입력... (Enter)"></textarea>
+                    <button class="btn-black" style="width:100%" id="btnSendChat">메시지 전송</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-footer">
+        <div><strong>JAEBONGTOOL</strong> | Contact: contact@susunzip.com</div>
+        <div>© 2026 SOMETHINGHOW. All rights reserved.</div>
+    </div>
+
+    <div id="tutorialOverlay">
+        <div class="tut-spotlight" id="tutSpot"></div>
+        <div class="tut-card" id="tutCard">
+            <div class="tut-step" id="tutStep">STEP 1</div>
+            <h3 class="tut-title" id="tutTitle">이미지 불러오기</h3>
+            <p class="tut-desc" id="tutDesc">설명 텍스트</p>
+            <button class="tut-btn" id="tutNext">다음</button>
+        </div>
+    </div>
+
+    <div id="qrHidden" style="display:none;"></div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
