@@ -116,7 +116,9 @@ export function initCanvas() {
         };
     });
 
-    UI.urlIn.addEventListener('input', (e) => generateQR(e.target.value));
+    UI.urlIn.addEventListener('input', (e) => {
+        generateQR(e.target.value);
+    });
 
     function getPos(e) {
         const r = UI.canvas.getBoundingClientRect();

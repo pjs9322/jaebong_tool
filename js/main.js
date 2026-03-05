@@ -9,8 +9,10 @@ import { initCanvas } from './core/canvas.js';
 import { initHistory } from './core/history.js';
 import { initPdfExport } from './services/pdfExport.js';
 import { initViewer } from './core/viewer.js';
+import { renderQueue } from './core/history.js';
+import { SyncAPI } from './util/api.js';
 
-function startup() {
+async function startup() {
     // 1. UI Elements 
     initUI();
 
@@ -20,6 +22,109 @@ function startup() {
     initHistory();
     initPdfExport();
     initViewer();
+
+    // 3. 기기 식별 및 SyncAPI 연동 (Task 001)
+    let myUuid = localStorage.getItem('jaebong_uuid');
+    if (!myUuid) {
+        myUuid = crypto.randomUUID();
+        localStorage.setItem('jaebong_uuid', myUuid);
+    }
+    S.myUuid = myUuid;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentId = urlParams.get('id');
+
+    if (currentId) {
+        // [공유 링크 또는 재입장 모드]
+        const res = await SyncAPI.readDocument(currentId);
+        if (!res.success) {
+            alert('문서를 찾을 수 없거나 서버 통신에 실패했습니다.');
+            window.location.href = '/jaebong/';
+            return;
+        }
+
+        if (res.data.owner_uuid === S.myUuid) {
+            // 본인 문서 (에디터 모드)
+            const initRes = await SyncAPI.initDocument(S.myUuid);
+            if (initRes.success && initRes.data.id === currentId) {
+                S.docId = initRes.data.id;
+                S.editToken = initRes.data.edit_token;
+                S.isViewerMode = false;
+                try {
+                    const payload = JSON.parse(res.data.history_json || '{"history":[]}');
+                    S.history = Array.isArray(payload) ? payload : (payload.history || []);
+                    if (payload.draft && !Array.isArray(payload)) {
+                        S.annos = payload.draft.annos || [];
+                        UI.urlIn.value = payload.draft.url || '';
+                        UI.reqDesc.value = payload.draft.desc || '';
+                        if (payload.draft.baseImgSrc) {
+                            S.baseImgSrc = payload.draft.baseImgSrc;
+                            UI.cWrap.style.display = 'flex';
+                        }
+                    }
+                } catch (e) { }
+                renderQueue();
+            } else {
+                alert('문서 권한 검증에 실패했습니다.');
+                window.location.href = '/jaebong/';
+                return;
+            }
+        } else {
+            // 타인 문서 (뷰어 전용)
+            S.docId = currentId;
+            S.isViewerMode = true;
+            try {
+                const payload = JSON.parse(res.data.history_json || '{"history":[]}');
+                S.history = Array.isArray(payload) ? payload : (payload.history || []);
+            } catch (e) { }
+            // UI 상태 반영 (데이터 길이 보정)
+            if (S.history.length > 0) {
+                UI.exportBtn.disabled = false;
+                UI.shareBtn.disabled = false;
+            }
+            // 뷰어 계층 팝업
+            UI.shareBtn.click();
+            UI.backToEditBtn.style.display = 'none'; // 돌아가기 강제 차단
+            return; // 튜토리얼 스킵
+        }
+    } else {
+        // [루트 신규/재접속 모드]
+        const initRes = await SyncAPI.initDocument(S.myUuid);
+        if (initRes.success) {
+            const newDocId = initRes.data.id;
+            window.history.replaceState(null, '', `?id=${newDocId}`);
+            S.docId = newDocId;
+            S.editToken = initRes.data.edit_token;
+            S.isViewerMode = false;
+            if (!initRes.data.is_new) {
+                const currDoc = await SyncAPI.readDocument(newDocId);
+                if (currDoc.success) {
+                    try {
+                        const payload = JSON.parse(currDoc.data.history_json || '{"history":[]}');
+                        S.history = Array.isArray(payload) ? payload : (payload.history || []);
+                        if (payload.draft && !Array.isArray(payload)) {
+                            S.annos = payload.draft.annos || [];
+                            UI.urlIn.value = payload.draft.url || '';
+                            UI.reqDesc.value = payload.draft.desc || '';
+                            if (payload.draft.baseImgSrc) {
+                                S.baseImgSrc = payload.draft.baseImgSrc;
+                                UI.cWrap.style.display = 'flex';
+                                // Note: Image load would ideally happen here, but since UI interacts 
+                                // it will be drawn when user triggers action or by manual calling loadImage
+                            }
+                        }
+                    } catch (e) { }
+                    if (S.history.length > 0) {
+                        UI.exportBtn.disabled = false;
+                        UI.shareBtn.disabled = false;
+                        renderQueue();
+                    }
+                }
+            }
+        } else {
+            alert('초기 통신에 실패했습니다.');
+        }
+    }
 
     // --- 튜토리얼 로직 ---
     const steps = [

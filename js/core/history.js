@@ -6,6 +6,21 @@ import { S } from '../store/state.js';
 import { UI } from '../store/elements.js';
 import { loadImage } from '../utils/imageLoader.js';
 import { render, resetMemoPanel, updateAnnoListUI, generateQR } from './canvas.js';
+import { SyncAPI } from '../util/api.js';
+
+let autoSaveTimer = null;
+export function triggerAutoSave() {
+    if (S.isViewerMode) return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(async () => {
+        if (!S.docId || !S.editToken) return;
+        const historyJson = JSON.stringify(S.history);
+        const res = await SyncAPI.syncDocument(S.docId, S.editToken, historyJson);
+        if (res && res.success) {
+            console.log('클라우드에 실시간 자동 저장 완료:', res.updated_at);
+        }
+    }, 1500);
+}
 
 export function clearEditingState() {
     S.editingHistoryId = null;
@@ -71,6 +86,7 @@ export function renderQueue() {
             S.history = S.history.filter(x => x.id !== h.id);
             if (S.editingHistoryId === h.id) clearEditingState();
             renderQueue();
+            triggerAutoSave();
             if (S.history.length === 0) {
                 UI.exportBtn.disabled = true;
                 UI.shareBtn.disabled = true;
@@ -93,7 +109,7 @@ export function initHistory() {
         }
     };
 
-    UI.saveReqBtn.onclick = () => {
+    UI.saveReqBtn.onclick = async () => {
         if (S.state === 'MEMO_WAIT' || S.state === 'EDITING') {
             if (!confirm("작성 중인 메모가 완료되지 않았습니다. 메모를 제외하고 이대로 리스트에 추가하시겠습니까?")) return;
             resetMemoPanel(false);
@@ -109,15 +125,39 @@ export function initHistory() {
             thumb = UI.canvas.toDataURL('image/jpeg', 0.2);
         }
 
+        UI.saveReqBtn.innerText = "저장 중...";
+        UI.saveReqBtn.disabled = true;
+
+        let baseImgSrc = (S.img && UI.cWrap.style.display !== 'none') ? S.baseImgSrc : null;
+
+        // Base64 문자열을 추출하여 서버에 Blob으로 업로드하고, URL로 치환
+        const uploadBase64 = async (b64) => {
+            if (!b64 || !b64.startsWith('data:image')) return b64;
+            try {
+                const res = await fetch(b64);
+                const blob = await res.blob();
+                const upRes = await SyncAPI.uploadImage(blob, S.docId);
+                return upRes.success ? upRes.url : b64;
+            } catch (e) {
+                console.error('Image upload failed', e);
+                return b64;
+            }
+        };
+
+        full = await uploadBase64(full);
+        thumb = await uploadBase64(thumb);
+        baseImgSrc = await uploadBase64(baseImgSrc);
+
         const data = {
             id: Date.now(),
             date: new Date().toLocaleTimeString(),
             thumb, full,
-            baseImgSrc: (S.img && UI.cWrap.style.display !== 'none') ? S.baseImgSrc : null,
+            baseImgSrc,
             annos: JSON.parse(JSON.stringify(S.annos)),
             url: UI.urlIn.value,
             desc: UI.reqDesc.value,
-            category: S.currentCategory
+            category: S.currentCategory,
+            status: 'request'
         };
 
         if (S.editingHistoryId) {
@@ -130,7 +170,6 @@ export function initHistory() {
         }
 
         UI.cWrap.style.display = 'none';
-        UI.saveReqBtn.disabled = true;
 
         clearEditingState();
         S.annos = [];
@@ -140,6 +179,7 @@ export function initHistory() {
         UI.exportBtn.disabled = false;
         UI.shareBtn.disabled = false;
         renderQueue();
+        triggerAutoSave();
     };
 
     UI.cancelEditBtn.onclick = () => {
