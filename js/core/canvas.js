@@ -4,25 +4,11 @@
  */
 import { S, COLORS } from '../store/state.js';
 import { UI } from '../store/elements.js';
+import { triggerAutoSave, updateSaveBtnState } from './history.js';
 
 export function generateQR(url) {
-    UI.qrHidden.innerHTML = '';
-    if (!url || !url.trim()) {
-        UI.qrVis.style.display = 'none';
-        S.qrImage = null;
-        return;
-    }
-    // QRCode is provided by external script
-    new QRCode(UI.qrHidden, { width: 200, height: 200, text: url });
-    setTimeout(() => {
-        const img = UI.qrHidden.querySelector('img');
-        if (img) {
-            UI.qrVis.innerHTML = '';
-            UI.qrVis.appendChild(img.cloneNode());
-            UI.qrVis.style.display = 'block';
-            S.qrImage = img;
-        }
-    }, 100);
+    // QR 생성 로직 완전 제거 (Task 002 반영)
+    return;
 }
 
 export function resetMemoPanel(autoSave) {
@@ -35,6 +21,7 @@ export function resetMemoPanel(autoSave) {
     UI.memoPanel.classList.remove('active');
     UI.guideText.style.display = 'block';
     updateAnnoListUI();
+    if (autoSave) triggerAutoSave(); // (Task 001) 박스 그리기 및 메모 작성, 삭제 후 자동저장 시도
 }
 
 export function openEditPanel(id) {
@@ -62,7 +49,10 @@ export function updateAnnoListUI() {
 }
 
 export function render(isExport = false) {
-    if (!S.img) return;
+    if (!S.img) {
+        if (typeof renderMinimap === 'function') renderMinimap();
+        return;
+    }
     const ctx = UI.ctx;
     ctx.clearRect(0, 0, S.w, S.h);
     ctx.drawImage(S.img, 0, 0);
@@ -97,28 +87,145 @@ export function render(isExport = false) {
         ctx.strokeRect(S.draftRect.x, S.draftRect.y, S.draftRect.w, S.draftRect.h);
         ctx.setLineDash([]);
     }
-    if (isExport && S.qrImage) {
-        const QSz = 180;
-        const Pad = 20;
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = "white";
-        ctx.fillRect(S.w - QSz - Pad - 5, Pad - 5, QSz + 10, QSz + 10);
-        ctx.drawImage(S.qrImage, S.w - QSz - Pad, Pad, QSz, QSz);
+    // QR 코드 그리기 렌더 파트 삭제 (Task 002)
+    renderMinimap();
+}
+
+function renderMinimap() {
+    if (!UI.minimapContainer) return;
+    if (!S.img || UI.cWrap.style.display === 'none') {
+        UI.minimapContainer.style.display = 'none';
+        return;
     }
+
+    UI.minimapContainer.style.display = 'block';
+
+    const mCanvas = UI.minimapCanvas;
+    const mCtx = UI.minimapCtx;
+    const mViewport = UI.minimapViewport;
+    const mi = UI.minimapInner;
+
+    const mapWidth = 150;
+    const ratio = S.h / S.w;
+    const mapHeight = mapWidth * ratio;
+
+    mCanvas.width = mapWidth;
+    mCanvas.height = mapHeight;
+    // 제거: UI.minimapContainer.style.height = mapHeight + 'px';
+    // 컨테이너는 Flex에 의해 높이가 자동 결정됨
+
+    mCtx.clearRect(0, 0, mapWidth, mapHeight);
+    mCtx.drawImage(S.img, 0, 0, mapWidth, mapHeight);
+
+    const scale = mapWidth / S.w;
+    S.annos.forEach(a => {
+        mCtx.fillStyle = 'rgba(239, 68, 68, 0.7)'; // Red box
+        mCtx.fillRect(a.rect.x * scale, a.rect.y * scale, a.rect.w * scale, a.rect.h * scale);
+    });
+
+    const sc = UI.scrollContainer;
+    const mc = UI.minimapContainer;
+
+    const contentW = UI.cWrap.offsetWidth;
+    const contentH = UI.cWrap.offsetHeight;
+
+    // 메인 콘텐츠 뷰포트 비율 (박스 크기)
+    const viewW = sc.clientWidth;
+    const viewH = sc.clientHeight;
+    const vScaleX = mapWidth / contentW;
+    const vScaleY = mapHeight / contentH;
+
+    // 미니맵 스크롤 동기화 (VSCode 동작 방식)
+    const maxScrollY = Math.max(0, sc.scrollHeight - sc.clientHeight);
+    const scrollPctY = maxScrollY > 0 ? (sc.scrollTop / maxScrollY) : 0;
+    const maxMinimapScrollY = Math.max(0, mapHeight - mc.clientHeight);
+    const innerTop = -(scrollPctY * maxMinimapScrollY);
+
+    if (mi) {
+        mi.style.transform = `translateY(${innerTop}px)`;
+    }
+
+    // Viewport width가 mapWidth를 초과해서 우측 보더가 잘리지 않도록 제한
+    const finalViewW = Math.min(viewW * vScaleX, mapWidth);
+
+    mViewport.style.width = finalViewW + 'px';
+    mViewport.style.height = (viewH * vScaleY) + 'px';
+    mViewport.style.left = (sc.scrollLeft * vScaleX) + 'px';
+    mViewport.style.top = (sc.scrollTop * vScaleY) + 'px';
 }
 
 export function initCanvas() {
     UI.catBtns.forEach(btn => {
         btn.onclick = () => {
-            UI.catBtns.forEach(b => b.classList.remove('active'));
+            UI.catBtns.forEach(b => {
+                b.classList.remove('active');
+                b.classList.remove('invalid-target');
+            });
             btn.classList.add('active');
             S.currentCategory = btn.dataset.val;
+            updateSaveBtnState();
         };
     });
 
     UI.urlIn.addEventListener('input', (e) => {
-        generateQR(e.target.value);
+        // generateQR(e.target.value); // (Task 002)
+        triggerAutoSave(); // URL 입력 시 자동저장 (Task 001)
     });
+
+    // --- 미니맵 인터랙션 구현 ---
+    if (UI.minimapContainer) {
+        let isDraggingMap = false;
+
+        UI.scrollContainer.addEventListener('scroll', () => {
+            if (!isDraggingMap) renderMinimap();
+        });
+
+        const updateScrollFromMinimap = (e) => {
+            const mc = UI.minimapContainer;
+            const sc = UI.scrollContainer;
+
+            const rect = mc.getBoundingClientRect();
+            const yInContainer = e.clientY - rect.top;
+            const xInContainer = e.clientX - rect.left;
+
+            const mapWidth = UI.minimapCanvas.width;
+            const mapHeight = UI.minimapCanvas.height;
+            const contentW = UI.cWrap.offsetWidth;
+            const contentH = UI.cWrap.offsetHeight;
+
+            const viewW = sc.clientWidth;
+            const viewH = sc.clientHeight;
+            const vScaleX = mapWidth / contentW;
+            const vScaleY = mapHeight / contentH;
+
+            // 현재 innerTop 보정값 계산
+            const maxScrollY = Math.max(0, sc.scrollHeight - sc.clientHeight);
+            const maxMinimapScrollY = Math.max(0, mapHeight - mc.clientHeight);
+            const scrollPctY = maxScrollY > 0 ? (sc.scrollTop / maxScrollY) : 0;
+            const currentInnerTop = -(scrollPctY * maxMinimapScrollY);
+
+            // Container 기준 클릭 Y를 Canvas 기준 Y로 매핑
+            const yOnMap = yInContainer - currentInnerTop;
+
+            sc.scrollTop = (yOnMap / vScaleY) - (viewH / 2);
+            sc.scrollLeft = (xInContainer / vScaleX) - (viewW / 2);
+
+            renderMinimap();
+        };
+
+        UI.minimapContainer.addEventListener('mousedown', (e) => {
+            isDraggingMap = true;
+            updateScrollFromMinimap(e);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDraggingMap) updateScrollFromMinimap(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDraggingMap = false;
+        });
+    }
 
     function getPos(e) {
         const r = UI.canvas.getBoundingClientRect();
@@ -263,6 +370,7 @@ export function initCanvas() {
         resetMemoPanel(false);
         updateAnnoListUI();
         render();
+        triggerAutoSave(); // 메모 추가 확인 시 자동저장
     };
 
     UI.deleteMemoBtn.onclick = () => {
@@ -272,6 +380,7 @@ export function initCanvas() {
             resetMemoPanel(false);
             updateAnnoListUI();
             render();
+            triggerAutoSave(); // 메모 삭제 시 자동저장
         }
     };
 

@@ -2,7 +2,7 @@
 .viewer-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: 1fr;
     background: #e5e7eb;
 }
 
@@ -26,6 +26,7 @@
     display: flex;
     flex-direction: column;
     gap: 40px;
+    flex-shrink: 0;
 }
 
 .paper-header {
@@ -90,8 +91,8 @@
     gap: 30px;
     align-items: flex-start;
     border-bottom: 1px solid #eee;
-    padding-bottom: 40px;
-    margin-bottom: 10px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
     position: relative;
 }
 
@@ -161,6 +162,7 @@
     line-height: 1.6;
     display: flex;
     gap: 8px;
+    word-break: break-all;
 }
 
 .view-memo-num {
@@ -177,10 +179,12 @@
     padding: 16px;
     border-radius: 8px;
     border: 1px solid #fecdd3;
+    word-break: break-all;
 }
 
 .view-img-col {
     width: 400px;
+    margin-top: 44px;
     flex-shrink: 0;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -317,4 +321,127 @@
     font-size: 11px;
     color: #9ca3af;
     margin-top: auto;
+}
+
+/* --- Viewer Image Lightbox (Modal) --- */
+.viewer-img-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    display: none; /* Flex when active */
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.viewer-img-close {
+    position: absolute;
+    top: 20px; right: 30px;
+    font-size: 40px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 10000;
+}
+
+.viewer-img-content {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    animation: slideUp 0.3s ease-out;
+}
+
+/* --- Mobile Responsive (Viewer Mode) --- */
+@media screen and (max-width: 768px) {
+    .topbar {
+        flex-direction: column;
+        gap: 5px;
+        height: auto;
+        padding: 10px 16px;
+    }
+
+    .logo-area img {
+        width: 150px;
+    }
+
+    .top-msg {
+        display: none;
+        /* 모바일에서는 긴 안내 메시지 숨김 */
+    }
+
+    #btnCopyLinkViewer {
+        padding: 8px 12px;
+        font-size: 11px;
+    }
+
+    .view-main {
+        padding: 16px;
+    }
+
+    .view-paper {
+        padding: 24px;
+        gap: 24px;
+        min-height: auto;
+    }
+
+    .paper-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .paper-title {
+        font-size: 20px;
+    }
+
+    .paper-header img {
+        width: 120px;
+        /* 로고 크기 축소 */
+    }
+
+    .view-content-row {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding-bottom: 24px;
+    }
+
+    .view-info-col {
+        display: contents;
+        /* wrapper 역할을 제거하고 직계 자식으로 만듦 */
+    }
+
+    .view-item-header {
+        order: 1;
+        margin-bottom: 8px;
+    }
+
+    .view-img-col {
+        order: 2;
+        width: 100%;
+        margin: 0;
+    }
+
+    .view-url-container {
+        order: 3;
+    }
+
+    .view-memo-box {
+        order: 4;
+    }
+
+    .view-add-req {
+        order: 5;
+    }
+
+    .app-footer {
+        flex-direction: column;
+        padding: 15px;
+        gap: 8px;
+        text-align: center;
+    }
 }

@@ -8,6 +8,6 @@ export const HANDLE_R = 5;
 export const S = {
     img: null, w: 0, h: 0, baseImgSrc: null, annos: [], draftRect: null, activeAnnoId: null,
     state: 'IDLE', action: null, dragStart: { x: 0, y: 0 }, history: [], editingHistoryId: null,
-    qrImage: null, currentCategory: 'text', isFitMode: false, zoom: 100, tutIndex: 0,
+    qrImage: null, currentCategory: null, isFitMode: false, zoom: 100, tutIndex: 0,
     myUuid: null, docId: null, editToken: null, isViewerMode: false
 };

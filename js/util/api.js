@@ -54,13 +54,13 @@ export const SyncAPI = {
      */
     syncDocument: async (docId, editToken, historyJson) => {
         try {
+            console.log('[SyncAPI] syncDocument request with token in body:', editToken);
             const res = await fetch(`${API_BASE}/docs/sync.php`, {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${editToken}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ id: docId, history_json: historyJson })
+                body: JSON.stringify({ id: docId, edit_token: editToken, history_json: historyJson })
             });
             return await res.json();
         } catch (err) {

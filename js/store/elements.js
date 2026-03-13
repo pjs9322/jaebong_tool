@@ -10,6 +10,9 @@ export function initUI() {
     // =========================================================
     UI.editorLayer = document.getElementById('editorLayer');
     UI.viewerLayer = document.getElementById('viewerLayer');
+    UI.loadingLayer = document.getElementById('loadingLayer');
+    UI.captureLayer = document.getElementById('captureLayer');
+    UI.captureStatusText = document.getElementById('captureStatusText');
 
     UI.editorBtns = document.getElementById('editorBtns');
     UI.viewerBtns = document.getElementById('viewerBtns');
@@ -20,11 +23,16 @@ export function initUI() {
     // =========================================================
     UI.exportBtn = document.getElementById('exportBtn');
     UI.shareBtn = document.getElementById('shareLinkBtn');
+    UI.btnResetAll = document.getElementById('btnResetAll');
+    UI.btnShowTutorial = document.getElementById('btnShowTutorial');
+    UI.topMessage = document.getElementById('topMessage');
 
     // =========================================================
     // 📂 3. STEP 01 - Image Upload
     // =========================================================
+    UI.urlCaptureIn = document.getElementById('urlCaptureIn');
     UI.btnScreenCapture = document.getElementById('btnScreenCapture');
+    UI.btnUrlCapture = document.getElementById('btnUrlCapture');
     UI.btnOpenImg = document.getElementById('btnOpenImg');
     UI.fileIn = document.getElementById('fileIn');
 
@@ -32,6 +40,11 @@ export function initUI() {
     // 🖼️ 4. STEP 02 - Canvas Core
     // =========================================================
     UI.canvas = document.getElementById('mainCanvas');
+    UI.minimapContainer = document.getElementById('minimapContainer');
+    UI.minimapInner = document.getElementById('minimapInner');
+    UI.minimapCanvas = document.getElementById('minimapCanvas');
+    UI.minimapViewport = document.getElementById('minimapViewport');
+    UI.minimapCtx = UI.minimapCanvas ? UI.minimapCanvas.getContext('2d') : null;
     UI.ctx = UI.canvas ? UI.canvas.getContext('2d') : null;
     UI.cWrap = document.getElementById('canvasWrapper');
     UI.scrollContainer = document.getElementById('scrollContainer');
@@ -100,4 +113,5 @@ export function initUI() {
     UI.tutTitle = document.getElementById('tutTitle');
     UI.tutDesc = document.getElementById('tutDesc');
     UI.tutNext = document.getElementById('tutNext');
+    UI.tutSkip = document.getElementById('tutSkip');
 }

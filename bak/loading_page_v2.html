@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>의뢰서 생성 중 — JAEBONGTOOL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500&family=Share+Tech+Mono&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --pink:    #f06292;
+  --pink-l:  #f8bbd0;
+  --pink-xl: #fce4ec;
+  --ink:     #1a1a2e;
+  --mid:     #6b7280;
+  --border:  #e5e7eb;
+  --bg:      #ffffff;
+  --bg2:     #f9f9fb;
+}
+
+html, body {
+  width: 100%; height: 100%;
+}
+
+body {
+  background: var(--bg);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+  color: var(--ink);
+}
+
+/* ── 헤더 ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+}
+.logo-icon {
+  width: 26px; height: 26px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.beta {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--pink);
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.header-center {
+  font-size: 13px;
+  color: var(--mid);
+  letter-spacing: 0.01em;
+}
+.header-center strong { color: var(--ink); font-weight: 500; }
+
+/* ── 메인 ── */
+main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 52px 60px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 520px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.03);
+}
+
+/* ── 링 영역 ── */
+.ring-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin-bottom: 40px;
+}
+
+/* 배경 트랙 */
+.track {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 98, 146, 0.12);
+}
+.track.t2 {
+  inset: 28px;
+  border-color: rgba(240, 98, 146, 0.07);
+}
+
+/* 회전 디스크 */
+.disk {
+  position: absolute;
+  inset: 0;
+}
+.disk.cw  { animation: spin 9s linear infinite; }
+.disk.ccw { animation: spin-rev 13s linear infinite; }
+
+/* 심볼 */
+.sym {
+  position: absolute;
+  top: 50%; left: 50%;
+  font-family: 'Share Tech Mono', monospace;
+  font-weight: 700;
+  line-height: 1;
+  transform-origin: 0 0;
+  white-space: nowrap;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+/* 중앙 원 */
+.center-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.center-circle {
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: 0 2px 12px rgba(240,98,146,0.08);
+}
+.center-pct {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.02em;
+}
+.center-label {
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--pink);
+  text-transform: uppercase;
+}
+
+/* 호형 진행 SVG */
+.arc-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.arc-bg {
+  fill: none;
+  stroke: var(--pink-xl);
+  stroke-width: 2;
+}
+.arc-fill {
+  fill: none;
+  stroke: var(--pink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 565;
+  stroke-dashoffset: 565;
+  animation: arc-grow 4.5s cubic-bezier(.4,0,.2,1) forwards;
+  filter: drop-shadow(0 0 3px rgba(240,98,146,0.4));
+}
+
+/* ── 텍스트 영역 ── */
+.main-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.sub-title {
+  font-size: 13px;
+  color: var(--mid);
+  font-weight: 300;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+/* ── 스텝 리스트 ── */
+.steps {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--mid);
+  transition: background .3s, color .3s;
+  border: 1px solid transparent;
+}
+.step-row.done {
+  background: #fff5f8;
+  border-color: var(--pink-l);
+  color: var(--ink);
+}
+.step-row.active {
+  background: var(--pink-xl);
+  border-color: var(--pink-l);
+  color: var(--ink);
+}
+.step-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.step-row.done   .step-icon { background: var(--pink); color: #fff; }
+.step-row.active .step-icon { background: var(--pink); color: #fff; animation: pulse-icon 1.4s ease-in-out infinite; }
+.step-row.idle   .step-icon { background: var(--border); color: var(--mid); }
+.step-text { flex: 1; }
+.step-tag {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.step-row.done   .step-tag { background: var(--pink-l); color: var(--pink); }
+.step-row.active .step-tag { background: var(--pink); color: #fff; }
+.step-row.idle   .step-tag { background: var(--border); color: var(--mid); }
+
+/* ── 하단 타이핑 콘솔 ── */
+.console {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.console-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--pink);
+  flex-shrink: 0;
+  animation: blink-dot 1.2s step-end infinite;
+}
+.console-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--mid);
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  animation: type-in 2.4s steps(40) forwards;
+}
+
+/* ── 푸터 ── */
+footer {
+  padding: 14px 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.footer-l {
+  font-size: 11px;
+  color: var(--mid);
+  letter-spacing: 0.03em;
+}
+.footer-l strong { color: var(--ink); font-weight: 600; }
+.footer-r {
+  font-size: 11px;
+  color: var(--mid);
+  letter-spacing: 0.03em;
+}
+
+/* ── 키프레임 ── */
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes spin-rev { to { transform: rotate(-360deg); } }
+
+@keyframes arc-grow {
+  0%   { stroke-dashoffset: 565; }
+  40%  { stroke-dashoffset: 254; }
+  70%  { stroke-dashoffset: 113; }
+  88%  { stroke-dashoffset:  51; }
+  100% { stroke-dashoffset:  28; }
+}
+
+@keyframes pulse-icon {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240,98,146,0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(240,98,146,0); }
+}
+
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes type-in {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+@keyframes fade-slide {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card { animation: fade-slide .5s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⊙</div>
+    JAEBONGTOOL
+    <span class="beta">Beta</span>
+  </div>
+  <div class="header-center">
+    <strong>"홈페이지 유지보수 의뢰서를 생성해보세요."</strong>
+  </div>
+  <div style="width:160px;"></div>
+</header>
+
+<!-- 메인 -->
+<main>
+  <div class="card">
+
+    <!-- 링 -->
+    <div class="ring-wrap">
+      <div class="track"></div>
+      <div class="track t2"></div>
+
+      <!-- 호형 진행바 SVG -->
+      <svg class="arc-svg" viewBox="0 0 200 200">
+        <circle class="arc-bg"   cx="100" cy="100" r="90"/>
+        <circle class="arc-fill" cx="100" cy="100" r="90"/>
+      </svg>
+
+      <!-- 바깥 회전 심볼 링 -->
+      <div class="disk cw"  id="outerDisk"></div>
+      <!-- 안쪽 역방향 링 -->
+      <div class="disk ccw" id="innerRing"></div>
+
+      <!-- 중앙 -->
+      <div class="center-wrap">
+        <div class="center-circle">
+          <span class="center-pct" id="pct">0%</span>
+          <span class="center-label">GEN</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 텍스트 -->
+    <p class="main-title">유지보수 의뢰서 페이지를 생성중입니다.</p>
+    <p class="sub-title">잠시만 기다려주세요.</p>
+
+    <!-- 스텝 리스트 -->
+    <div class="steps" id="stepList">
+      <div class="step-row done"   id="s0">
+        <div class="step-icon">✓</div>
+        <span class="step-text">이미지 및 URL 정보 수집</span>
+        <span class="step-tag">DONE</span>
+      </div>
+      <div class="step-row active" id="s1">
+        <div class="step-icon">⋯</div>
+        <span class="step-text">요청사항 카테고리 분석</span>
+        <span class="step-tag">IN PROGRESS</span>
+      </div>
+      <div class="step-row idle"   id="s2">
+        <div class="step-icon">·</div>
+        <span class="step-text">문서 구조 렌더링</span>
+        <span class="step-tag">WAITING</span>
+      </div>
+      <div class="step-row idle"   id="s3">
+        <div class="step-icon">·</div>
+        <span class="step-text">공유 링크 생성</span>
+        <span class="step-tag">WAITING</span>
+      </div>
+    </div>
+
+    <!-- 콘솔 -->
+    <div class="console">
+      <div class="console-dot"></div>
+      <span class="console-text" id="consoleText">ANALYZING REQUEST CATEGORIES...</span>
+    </div>
+
+  </div>
+</main>
+
+<!-- 푸터 -->
+<footer>
+  <div class="footer-l"><strong>JAEBONGTOOL</strong> | Contact: contact@susunzip.com</div>
+  <div class="footer-r">© 2026 SOMETHINGHOW. All rights reserved.</div>
+</footer>
+
+<script>
+/* ── 심볼 배치 ── */
+const outerSyms = ['{','}','(',')',  '[',']', '.', '*', ';', ':', '/', '|', '=', '<', '>', '!', '&'];
+const innerSyms = ['=>', 'fn', '==', '&&', '++', '--', '+=', 'if', 'for'];
+
+function placeSymbols(containerId, symbols, radius, fontSize, baseOpacity) {
+  const container = document.getElementById(containerId);
+  const n = symbols.length;
+  symbols.forEach((s, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+    const rotDeg = (angle * 180 / Math.PI) + 90;
+    // 군집 효과: 위쪽 반원은 더 진하게
+    const clusterAlpha = 0.18 + 0.72 * Math.pow(Math.max(0, -Math.sin(angle * 2 - 0.8)), 1.2);
+    const el = document.createElement('span');
+    el.className = 'sym';
+    el.textContent = s;
+    el.style.cssText = `
+      font-size: ${fontSize}px;
+      opacity: ${(baseOpacity * clusterAlpha).toFixed(2)};
+      transform: translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${rotDeg}deg);
+      color: var(--ink);
+    `;
+    container.appendChild(el);
+  });
+}
+
+placeSymbols('outerDisk', outerSyms, 86, 17, 1.0);
+placeSymbols('innerRing',  innerSyms, 56,  9, 0.6);
+
+/* ── 퍼센트 카운터 ── */
+const pctEl = document.getElementById('pct');
+const targets = [0, 55, 78, 91, 97];
+const timings = [0, 1200, 2200, 3200, 4500];
+targets.forEach((t, i) => {
+  const prev = targets[i-1] ?? 0;
+  if (i === 0) return;
+  const delay = timings[i-1];
+  const dur   = timings[i] - timings[i-1];
+  const start = Date.now() + delay;
+  setTimeout(() => {
+    const tick = setInterval(() => {
+      const p = Math.min(1, (Date.now() - start) / dur);
+      const val = Math.round(prev + (t - prev) * p);
+      pctEl.textContent = val + '%';
+      if (p >= 1) clearInterval(tick);
+    }, 30);
+  }, delay);
+});
+
+/* ── 스텝 진행 ── */
+const stepData = [
+  { el: 's1', next: 's2', activeText: '요청사항 카테고리 분석', console: 'ANALYZING REQUEST CATEGORIES...' },
+  { el: 's2', next: 's3', activeText: '문서 구조 렌더링',       console: 'RENDERING DOCUMENT STRUCTURE...'  },
+  { el: 's3', next: null, activeText: '공유 링크 생성',          console: 'GENERATING SHARE LINK...'         },
+];
+
+const consoleMessages = [
+  'ANALYZING REQUEST CATEGORIES...',
+  'LOADING COMPONENT MODULES...',
+  'RENDERING DOCUMENT STRUCTURE...',
+  'COMPILING FORM FIELDS...',
+  'GENERATING SHARE LINK...',
+  'ALMOST READY...',
+];
+let cIdx = 0;
+const consoleEl = document.getElementById('consoleText');
+
+function cycleConsole() {
+  cIdx = (cIdx + 1) % consoleMessages.length;
+  consoleEl.style.animation = 'none';
+  consoleEl.textContent = consoleMessages[cIdx];
+  void consoleEl.offsetWidth;
+  consoleEl.style.animation = 'type-in 2.2s steps(38) forwards';
+}
+
+function advanceStep(i) {
+  if (i >= stepData.length) return;
+  const d = stepData[i];
+  const cur = document.getElementById(d.el);
+  cur.className = 'step-row done';
+  cur.querySelector('.step-icon').textContent = '✓';
+  cur.querySelector('.step-tag').textContent = 'DONE';
+  if (d.next) {
+    const nxt = document.getElementById(d.next);
+    nxt.className = 'step-row active';
+    nxt.querySelector('.step-icon').textContent = '⋯';
+    nxt.querySelector('.step-tag').textContent = 'IN PROGRESS';
+  }
+}
+
+[1600, 2800, 3800].forEach((t, i) => setTimeout(() => advanceStep(i), t));
+setInterval(cycleConsole, 2400);
+</script>
+</body>
+</html>
