@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JAEBONGTOOL – 홈페이지 자산관련 기능 프로토타입</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f5f5f5; font-size: 13px; color: #333; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 52px;
+      background: #fff; border-bottom: 1px solid #e5e5e5;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; }
+    .logo-badge { font-size: 10px; background: #6366f1; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .header-center { font-size: 13px; color: #555; font-weight: 500; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-reset { padding: 7px 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; font-size: 12px; color: #555; }
+    .btn-share { padding: 7px 16px; border-radius: 8px; background: #3b82f6; color: #fff; border: none; cursor: pointer; font-size: 12px; font-weight: 600; }
+
+    /* ── Main Grid ── */
+    .main { display: grid; grid-template-columns: 280px 1fr 300px; gap: 0; height: calc(100vh - 52px); overflow: hidden; }
+
+    /* ── Panel Base ── */
+    .panel { background: #fff; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; overflow: hidden; }
+    .panel-last { border-right: none; border-left: 1px solid #e8e8e8; }
+    .step-label { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; border-bottom: 1px solid #f0f0f0; }
+    .step-badge { background: #f0f4ff; color: #3b82f6; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+    .step-title { font-weight: 700; font-size: 13px; }
+
+    /* ── STEP 01 ── */
+    .step1-body { padding: 14px 14px 0; flex: 1; overflow-y: auto; }
+    .section-label { font-size: 11px; color: #f44; font-weight: 700; margin-bottom: 6px; }
+    .url-input { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; color: #999; margin-bottom: 8px; outline: none; }
+    .url-input:focus { border-color: #3b82f6; }
+    .btn-ai { width: 100%; padding: 10px; background: #111; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 12px; }
+    .btn-ai:hover { background: #333; }
+    .divider { text-align: center; color: #bbb; font-size: 11px; margin: 8px 0; }
+    .btn-file { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 12px; cursor: pointer; color: #555; }
+    .btn-file:hover { background: #f8f8f8; }
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px; }
+    .list-title { font-size: 12px; font-weight: 700; color: #f44; }
+    .list-count { font-size: 12px; font-weight: 700; color: #3b82f6; }
+    .request-list { display: flex; flex-direction: column; gap: 8px; padding-bottom: 14px; }
+    .req-card { border: 1px solid #eee; border-radius: 10px; overflow: hidden; cursor: pointer; transition: box-shadow .15s; }
+    .req-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .req-card-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #fafafa; }
+    .req-meta { font-size: 10px; color: #888; }
+    .req-actions { display: flex; gap: 4px; }
+    .btn-sm { padding: 2px 8px; border-radius: 5px; font-size: 10px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #555; }
+    .btn-sm.del { color: #f44; border-color: #fcc; }
+    .req-tags { display: flex; gap: 4px; flex-wrap: wrap; padding: 6px 10px 4px; }
+    .tag { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+    .tag-dev { background: #e0e7ff; color: #4f46e5; }
+    .tag-fix { background: #fef3c7; color: #d97706; }
+    .tag-content { background: #dcfce7; color: #16a34a; }
+    .tag-asset { background: #fce7f3; color: #db2777; }
+    .tag-memo { background: #f3f4f6; color: #6b7280; }
+    .tag-img { background: #ffe4e6; color: #e11d48; }
+    .req-thumb { width: 100%; height: 70px; object-fit: cover; object-position: top; border-top: 1px solid #f0f0f0; }
+    .req-thumb-placeholder { width: 100%; height: 70px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 11px; border-top: 1px solid #f0f0f0; }
+    .req-asset-preview { padding: 6px 10px 8px; font-size: 10px; color: #666; line-height: 1.5; }
+    .req-asset-item { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+    .req-asset-dot { width: 5px; height: 5px; border-radius: 50%; background: #db2777; flex-shrink: 0; }
+
+    /* ── STEP 02 ── */
+    .step2 { border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; }
+    .canvas-area { flex: 1; position: relative; background: #f0f0f0; overflow: hidden; }
+    .canvas-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #bbb; font-size: 13px; }
+    .canvas-img { width: 100%; height: 100%; object-fit: contain; }
+    /* selection overlay */
+    .sel-box { position: absolute; border: 2px solid #3b82f6; background: rgba(59,130,246,.12); border-radius: 3px; pointer-events: none; display: none; }
+    .sel-box.asset { border-color: #db2777; background: rgba(219,39,119,.1); }
+
+    /* ── Canvas bottom bar ── */
+    .canvas-bottom { padding: 10px 14px; background: #fff; border-top: 1px solid #eee; }
+    .memo-input { width: 100%; padding: 9px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; color: #999; margin-bottom: 10px; resize: none; height: 52px; outline: none; font-family: inherit; }
+    .memo-input:focus { border-color: #3b82f6; color: #333; }
+    .category-bar { display: flex; align-items: center; justify-content: space-between; }
+    .category-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .cat-btn {
+      padding: 6px 10px; border-radius: 20px; border: 1px solid #e0e0e0;
+      background: #fff; font-size: 11px; cursor: pointer; color: #555;
+      display: flex; align-items: center; gap: 4px;
+      transition: all .15s;
+    }
+    .cat-btn:hover { background: #f8f8f8; border-color: #ccc; }
+    .cat-btn.active { background: #fce7f3; border-color: #db2777; color: #db2777; font-weight: 700; }
+    .cat-btn.cat-content.active { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+    .cat-btn.cat-add.active { background: #e0e7ff; border-color: #4f46e5; color: #4f46e5; }
+    .cat-btn.cat-fix.active { background: #fef3c7; border-color: #d97706; color: #d97706; }
+    .cat-btn.cat-dev.active { background: #ede9fe; border-color: #7c3aed; color: #7c3aed; }
+    .btn-add-list {
+      padding: 8px 18px; background: #f9a8d4; color: #9d174d;
+      border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: background .15s;
+    }
+    .btn-add-list:hover { background: #f472b6; color: #fff; }
+    .btn-add-list.ready { background: #db2777; color: #fff; }
+
+    /* ── STEP 03 ── */
+    .step3-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #aaa; font-size: 12px; line-height: 1.8; }
+    .step3-hint { color: #db2777; font-size: 11px; margin-top: 6px; }
+
+    /* ══════════════════════════════════
+       홈페이지 자산관련 모달
+    ══════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      z-index: 200; display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 16px; width: 640px; max-height: 86vh;
+      display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .modal-title-wrap { display: flex; align-items: center; gap: 10px; }
+    .modal-icon { font-size: 22px; }
+    .modal-title { font-size: 16px; font-weight: 800; color: #111; }
+    .modal-sub { font-size: 11px; color: #888; margin-top: 2px; }
+    .modal-close { background: none; border: none; font-size: 20px; color: #aaa; cursor: pointer; padding: 2px; line-height: 1; }
+    .modal-close:hover { color: #555; }
+    .modal-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+
+    /* 카테고리 섹션 */
+    .asset-section { margin-bottom: 20px; }
+    .asset-section-title {
+      font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .asset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .asset-item {
+      border: 1.5px solid #f0f0f0; border-radius: 10px; padding: 12px 10px;
+      cursor: pointer; transition: all .15s; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      background: #fff;
+    }
+    .asset-item:hover { border-color: #db2777; background: #fff5f9; }
+    .asset-item.selected { border-color: #db2777; background: #fce7f3; }
+    .asset-item.selected .asset-item-name { color: #db2777; font-weight: 700; }
+    .asset-emoji { font-size: 20px; }
+    .asset-item-name { font-size: 12px; font-weight: 600; color: #333; }
+    .asset-item-desc { font-size: 10px; color: #999; line-height: 1.4; }
+    .asset-item .check { display: none; position: absolute; top: 6px; right: 8px; font-size: 12px; color: #db2777; }
+    .asset-item { position: relative; }
+    .asset-item.selected .check { display: block; }
+
+    /* 선택된 항목 상세 입력 */
+    .detail-area { margin-top: 18px; padding: 16px; background: #fff5f9; border-radius: 10px; border: 1px solid #fce7f3; }
+    .detail-title { font-size: 12px; font-weight: 700; color: #db2777; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .detail-form { display: flex; flex-direction: column; gap: 10px; }
+    .detail-row { display: flex; flex-direction: column; gap: 4px; }
+    .detail-label { font-size: 11px; color: #666; font-weight: 600; }
+    .detail-input {
+      padding: 8px 10px; border: 1px solid #f0b8d0; border-radius: 8px;
+      font-size: 12px; font-family: inherit; outline: none;
+      background: #fff; width: 100%;
+    }
+    .detail-input:focus { border-color: #db2777; }
+    .detail-textarea { height: 70px; resize: none; }
+    .urgency-btns { display: flex; gap: 6px; }
+    .urgency-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid #ddd; background: #fff; font-size: 11px; cursor: pointer; color: #666; }
+    .urgency-btn.u-high.sel { background: #fee2e2; border-color: #ef4444; color: #ef4444; font-weight: 700; }
+    .urgency-btn.u-mid.sel { background: #fef3c7; border-color: #f59e0b; color: #f59e0b; font-weight: 700; }
+    .urgency-btn.u-low.sel { background: #dcfce7; border-color: #22c55e; color: #22c55e; font-weight: 700; }
+
+    /* 선택 요약 */
+    .selected-summary {
+      margin-top: 16px; padding: 12px 14px; background: #f8faff;
+      border: 1px solid #e0e7ff; border-radius: 10px;
+      font-size: 11px; color: #555; line-height: 1.8;
+    }
+    .selected-summary-title { font-weight: 700; color: #3b82f6; margin-bottom: 6px; font-size: 12px; }
+    .summary-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: #fce7f3; color: #db2777; border-radius: 12px;
+      padding: 2px 8px; font-size: 10px; font-weight: 600; margin: 2px;
+    }
+
+    .modal-footer {
+      padding: 14px 22px; border-top: 1px solid #f0f0f0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-hint { font-size: 11px; color: #bbb; }
+    .footer-actions { display: flex; gap: 8px; }
+    .btn-cancel { padding: 9px 18px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-size: 12px; cursor: pointer; color: #555; }
+    .btn-confirm {
+      padding: 9px 22px; background: #db2777; color: #fff;
+      border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-confirm:hover { background: #be185d; }
+    .btn-confirm:disabled { background: #f9a8d4; cursor: not-allowed; }
+
+    /* 토스트 */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #111; color: #fff; padding: 10px 20px; border-radius: 30px;
+      font-size: 12px; opacity: 0; transition: all .3s; z-index: 999; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* 스크롤바 */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ══ Header ══ -->
+<header>
+  <div class="logo">
+    <span>⚙️ JAEBONGTOOL</span>
+    <span class="logo-badge">Beta</span>
+  </div>
+  <div class="header-center">"홈페이지 유지보수 의뢰서를 생성해보세요."</div>
+  <div class="header-actions">
+    <button class="btn-reset">의뢰서 초기화</button>
+    <button class="btn-share">🔗 웹 링크 생성 (공유)</button>
+  </div>
+</header>
+
+<!-- ══ Main ══ -->
+<div class="main">
+
+  <!-- STEP 01 -->
+  <div class="panel">
+    <div class="step-label">
+      <span class="step-badge">STEP 01</span>
+      <span class="step-title">이미지 가져오기</span>
+    </div>
+    <div class="step1-body">
+      <div class="section-label">홈페이지 주소로 자동 캡처 (현재 무료)</div>
+      <input class="url-input" type="text" placeholder="https://..." id="urlInput" />
+      <button class="btn-ai" onclick="loadSampleImage()">AI로 페이지 가져오기</button>
+      <div class="divider">또는</div>
+      <button class="btn-file" onclick="document.getElementById('fileInput').click()">📁 파일 열기 / Ctrl+V</button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event)" />
+
+      <div class="list-header">
+        <span class="list-title">요청사항 리스트</span>
+        <span class="list-count" id="listCount">0건</span>
+      </div>
+      <div class="request-list" id="requestList"></div>
+    </div>
+  </div>
+
+  <!-- STEP 02 -->
+  <div class="step2">
+    <div class="step-label">
+      <span class="step-badge">STEP 02</span>
+      <span class="step-title">WORK CANVAS</span>
+    </div>
+    <div class="canvas-area" id="canvasArea" onmousedown="startDrag(event)" onmousemove="moveDrag(event)" onmouseup="endDrag(event)">
+      <div class="canvas-empty" id="canvasEmpty">이미지를 불러오면 이 영역에 표시됩니다.</div>
+      <img id="canvasImg" class="canvas-img" style="display:none" alt="캔버스 이미지" />
+      <div class="sel-box" id="selBox"></div>
+    </div>
+    <div class="canvas-bottom">
+      <textarea class="memo-input" id="memoInput" placeholder="이 페이지에 대한 전체적인 참고사항을 입력하세요.&#10;예시) 이미지는 추후 전달드리겠습니다, 이미지 직접 수급 부탁드립니다, www.susunzip.com 해당 레퍼런스 참고하여 디자인 리뉴얼 부탁드립니다."></textarea>
+      <div class="category-bar">
+        <div class="category-btns">
+          <button class="cat-btn cat-content" onclick="selectCat(this,'content')">📝 내용 수정</button>
+          <button class="cat-btn cat-add"     onclick="selectCat(this,'add')">📐 항목 추가</button>
+          <button class="cat-btn cat-fix"     onclick="selectCat(this,'fix')">🔧 기능 수정</button>
+          <button class="cat-btn cat-dev"     onclick="selectCat(this,'dev')">✨ 기능 개발</button>
+          <!-- ★ 새 버튼 ★ -->
+          <button class="cat-btn cat-asset"   onclick="openAssetModal()" id="catAsset">🏠 홈페이지 자산관련</button>
+        </div>
+        <button class="btn-add-list" id="btnAddList" onclick="addToList()">← 리스트 추가하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 03 -->
+  <div class="panel panel-last">
+    <div class="step-label">
+      <span class="step-badge">STEP 03</span>
+      <span class="step-title">요청사항 메모 생성</span>
+    </div>
+    <div class="step3-body" id="step3Body">
+      캔버스에서 수정하고 싶은 부분을<br />마우스로 드래그하여 박스를 그려주세요.
+      <div class="step3-hint">(박스를 클릭하면 다시 수정할 수 있습니다)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     홈페이지 자산관련 모달
+══════════════════════════════════ -->
+<div class="modal-overlay" id="assetModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <span class="modal-icon">🏠</span>
+        <div>
+          <div class="modal-title">홈페이지 자산관련 요청</div>
+          <div class="modal-sub">도메인, 호스팅, 서버, 계정 분실 등 자산 관련 문제를 선택해주세요</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeAssetModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- 섹션 1: 인프라 -->
+      <div class="asset-section">
+        <div class="asset-section-title">🌐 인프라 / 서비스</div>
+        <div class="asset-grid">
+          <div class="asset-item" onclick="toggleAsset(this,'domain')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🌐</span>
+            <div class="asset-item-name">도메인</div>
+            <div class="asset-item-desc">도메인 만료·이전·구매 관련</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'hosting')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">☁️</span>
+            <div class="asset-item-name">호스팅</div>
+            <div class="asset-item-desc">호스팅 계정·플랜·이전 관련</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'server')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🖥️</span>
+            <div class="asset-item-name">서버</div>
+            <div class="asset-item-desc">서버 설정·이슈·용량 관련</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'ssl')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🔒</span>
+            <div class="asset-item-name">SSL 인증서</div>
+            <div class="asset-item-desc">HTTPS 인증서 만료·갱신</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'email')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">📧</span>
+            <div class="asset-item-name">이메일 서비스</div>
+            <div class="asset-item-desc">메일 계정·발송 오류 관련</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'cdn')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">⚡</span>
+            <div class="asset-item-name">CDN / 속도</div>
+            <div class="asset-item-desc">페이지 속도·CDN 설정</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 섹션 2: 이전·마이그레이션 -->
+      <div class="asset-section">
+        <div class="asset-section-title">🚚 이전 / 마이그레이션</div>
+        <div class="asset-grid">
+          <div class="asset-item" onclick="toggleAsset(this,'migration')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🚀</span>
+            <div class="asset-item-name">홈페이지 이전</div>
+            <div class="asset-item-desc">서버·호스팅 이전 작업</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'dbmigration')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🗄️</span>
+            <div class="asset-item-name">DB 마이그레이션</div>
+            <div class="asset-item-desc">데이터베이스 이전·백업</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'backup')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">💾</span>
+            <div class="asset-item-name">백업 / 복구</div>
+            <div class="asset-item-desc">사이트 백업 및 복원 요청</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 섹션 3: 계정 분실 -->
+      <div class="asset-section">
+        <div class="asset-section-title">🔑 계정 / 접속정보 분실</div>
+        <div class="asset-grid">
+          <div class="asset-item" onclick="toggleAsset(this,'site-access')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🌍</span>
+            <div class="asset-item-name">홈페이지 접속정보 분실</div>
+            <div class="asset-item-desc">FTP·SSH·호스팅 계정 분실</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'admin-access')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🛡️</span>
+            <div class="asset-item-name">관리자페이지 접속정보 분실</div>
+            <div class="asset-item-desc">CMS·어드민 URL·비밀번호 분실</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'admin-account')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">👤</span>
+            <div class="asset-item-name">관리자 계정정보 분실</div>
+            <div class="asset-item-desc">아이디·이메일·비밀번호 분실</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'domain-account')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🔑</span>
+            <div class="asset-item-name">도메인 등록기관 계정 분실</div>
+            <div class="asset-item-desc">도메인 관리 계정 접속 불가</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'hosting-account')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">☁️</span>
+            <div class="asset-item-name">호스팅 계정 분실</div>
+            <div class="asset-item-desc">호스팅사 로그인 불가</div>
+          </div>
+          <div class="asset-item" onclick="toggleAsset(this,'api-key')">
+            <span class="check">✓</span>
+            <span class="asset-emoji">🗝️</span>
+            <div class="asset-item-name">API 키 / 토큰 분실</div>
+            <div class="asset-item-desc">외부 서비스 연동 키 분실</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 선택된 항목 상세 입력 -->
+      <div class="detail-area" id="detailArea" style="display:none">
+        <div class="detail-title">📋 상세 내용 입력 <span id="selectedCount" style="font-size:11px;font-weight:400;color:#be185d;"></span></div>
+        <div class="detail-form">
+          <div class="detail-row">
+            <div class="detail-label">구체적인 상황을 설명해주세요 *</div>
+            <textarea class="detail-input detail-textarea" id="assetDesc" placeholder="예) 도메인 만료일이 3일 남았는데 등록기관 계정 비밀번호를 분실했습니다. 등록 이메일도 변경된 상태입니다."></textarea>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">긴급도</div>
+            <div class="urgency-btns">
+              <button class="urgency-btn u-high" onclick="selectUrgency(this,'high')">🔴 긴급 (당일)</button>
+              <button class="urgency-btn u-mid"  onclick="selectUrgency(this,'mid')">🟡 보통 (3일 이내)</button>
+              <button class="urgency-btn u-low"  onclick="selectUrgency(this,'low')">🟢 여유 (1주일 이내)</button>
+            </div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">관련 업체명 또는 서비스명 (선택)</div>
+            <input class="detail-input" id="assetVendor" type="text" placeholder="예) 카페24, 가비아, AWS, Cloudflare, 워드프레스 등" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 선택 요약 -->
+      <div class="selected-summary" id="selectedSummary" style="display:none">
+        <div class="selected-summary-title">✅ 선택된 항목</div>
+        <div id="summaryChips"></div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <div class="modal-footer">
+      <div class="footer-hint">복수 선택 가능 · 세부 내용은 선택 후 입력</div>
+      <div class="footer-actions">
+        <button class="btn-cancel" onclick="closeAssetModal()">취소</button>
+        <button class="btn-confirm" id="btnConfirm" onclick="confirmAsset()" disabled>요청 리스트에 추가</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ── 상태 ── */
+  let currentCat = null;
+  let requestItems = [];
+  let selectedAssets = new Set();
+  let urgency = null;
+  let isDragging = false;
+  let dragStart = {};
+  let hasImage = false;
+
+  const ASSET_LABELS = {
+    domain: '도메인', hosting: '호스팅', server: '서버',
+    ssl: 'SSL 인증서', email: '이메일 서비스', cdn: 'CDN/속도',
+    migration: '홈페이지 이전', dbmigration: 'DB 마이그레이션', backup: '백업/복구',
+    'site-access': '홈페이지 접속정보 분실', 'admin-access': '관리자페이지 접속정보 분실',
+    'admin-account': '관리자 계정정보 분실', 'domain-account': '도메인 등록기관 계정 분실',
+    'hosting-account': '호스팅 계정 분실', 'api-key': 'API키/토큰 분실'
+  };
+
+  /* ── 샘플 이미지 로드 ── */
+  function loadSampleImage() {
+    const url = document.getElementById('urlInput').value;
+    if (!url) { showToast('URL을 입력해주세요'); return; }
+    document.getElementById('canvasEmpty').textContent = '⏳ AI가 페이지를 캡처중입니다...';
+    setTimeout(() => {
+      document.getElementById('canvasEmpty').style.display = 'none';
+      // 실제 구현에서는 스크린샷 API 결과 이미지를 표시
+      document.getElementById('canvasImg').style.display = 'block';
+      document.getElementById('canvasImg').src = 'https://via.placeholder.com/900x500/f0f4ff/3b82f6?text=캡처된+홈페이지+이미지';
+      hasImage = true;
+      showToast('✅ 페이지 캡처 완료!');
+    }, 1200);
+  }
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('canvasEmpty').style.display = 'none';
+      const img = document.getElementById('canvasImg');
+      img.src = ev.target.result;
+      img.style.display = 'block';
+      hasImage = true;
+      showToast('✅ 이미지 업로드 완료!');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── 카테고리 선택 ── */
+  function selectCat(btn, cat) {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    if (currentCat === cat) { currentCat = null; return; }
+    btn.classList.add('active');
+    currentCat = cat;
+    checkAddReady();
+  }
+
+  function checkAddReady() {
+    const btn = document.getElementById('btnAddList');
+    if (currentCat || selectedAssets.size > 0) {
+      btn.classList.add('ready');
+    } else {
+      btn.classList.remove('ready');
+    }
+  }
+
+  /* ── 드래그 (박스 그리기) ── */
+  function startDrag(e) {
+    if (!hasImage) return;
+    isDragging = true;
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const box = document.getElementById('selBox');
+    box.style.left = dragStart.x + 'px';
+    box.style.top  = dragStart.y + 'px';
+    box.style.width = '0'; box.style.height = '0';
+    box.style.display = 'block';
+    box.className = 'sel-box' + (currentCat === 'asset' ? ' asset' : '');
+  }
+
+  function moveDrag(e) {
+    if (!isDragging) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    const box = document.getElementById('selBox');
+    box.style.left   = Math.min(x, dragStart.x) + 'px';
+    box.style.top    = Math.min(y, dragStart.y) + 'px';
+    box.style.width  = Math.abs(x - dragStart.x) + 'px';
+    box.style.height = Math.abs(y - dragStart.y) + 'px';
+  }
+
+  function endDrag(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    const box = document.getElementById('selBox');
+    if (parseInt(box.style.width) < 10 || parseInt(box.style.height) < 10) {
+      box.style.display = 'none';
+    }
+  }
+
+  /* ── 리스트 추가 ── */
+  function addToList() {
+    if (!currentCat) { showToast('카테고리를 먼저 선택해주세요'); return; }
+    const memo = document.getElementById('memoInput').value;
+    const now = new Date();
+    const timeStr = `오후 ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const id = ++idCounter;
+
+    const catMap = { content:'내용 수정', add:'항목 추가', fix:'기능 수정', dev:'기능 개발' };
+    const tagClassMap = { content:'tag-content', add:'tag-add', fix:'tag-fix', dev:'tag-dev' };
+
+    const item = {
+      id, type: currentCat, label: catMap[currentCat],
+      memo: memo || '', time: timeStr, isAsset: false
+    };
+    requestItems.push(item);
+    renderList();
+    currentCat = null;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('memoInput').value = '';
+    document.getElementById('selBox').style.display = 'none';
+    showToast(`✅ #${id} 요청사항이 추가되었습니다`);
+    checkAddReady();
+  }
+
+  let idCounter = 0;
+
+  /* ── 리스트 렌더 ── */
+  function renderList() {
+    const list = document.getElementById('requestList');
+    list.innerHTML = '';
+    document.getElementById('listCount').textContent = requestItems.length + '건';
+
+    requestItems.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'req-card';
+
+      const tagClassMap = { content:'tag-content', add:'', fix:'tag-fix', dev:'tag-dev', asset:'tag-asset' };
+
+      if (item.isAsset) {
+        card.innerHTML = `
+          <div class="req-card-header">
+            <span class="req-meta">#${item.id} · ${item.time}</span>
+            <div class="req-actions">
+              <button class="btn-sm" onclick="removeItem(${item.id})">삭제</button>
+            </div>
+          </div>
+          <div class="req-tags">
+            <span class="tag tag-asset">🏠 자산관련</span>
+            ${item.urgency ? `<span class="tag tag-memo">${item.urgencyLabel}</span>` : ''}
+            <span class="tag tag-memo">항목 ${item.assets.length}개</span>
+          </div>
+          <div class="req-asset-preview">
+            ${item.assets.map(a => `<div class="req-asset-item"><div class="req-asset-dot"></div>${ASSET_LABELS[a]||a}</div>`).join('')}
+            ${item.desc ? `<div style="color:#888;margin-top:4px;font-size:9px;">${item.desc.substring(0,60)}${item.desc.length>60?'…':''}</div>` : ''}
+          </div>
+        `;
+      } else {
+        const tagClass = tagClassMap[item.type] || '';
+        card.innerHTML = `
+          <div class="req-card-header">
+            <span class="req-meta">#${item.id} · ${item.time}</span>
+            <div class="req-actions">
+              <button class="btn-sm">수정</button>
+              <button class="btn-sm del" onclick="removeItem(${item.id})">삭제</button>
+            </div>
+          </div>
+          <div class="req-tags">
+            <span class="tag ${tagClass}">${item.label}</span>
+            ${item.memo ? '<span class="tag tag-memo">메모 있음</span>' : ''}
+          </div>
+          <div class="req-thumb-placeholder">캔버스 영역 캡처</div>
+        `;
+      }
+      list.appendChild(card);
+    });
+  }
+
+  function removeItem(id) {
+    requestItems = requestItems.filter(i => i.id !== id);
+    renderList();
+    showToast('삭제되었습니다');
+  }
+
+  /* ══════════════════════════════════
+     자산관련 모달 로직
+  ══════════════════════════════════ */
+  function openAssetModal() {
+    // 초기화
+    selectedAssets.clear();
+    urgency = null;
+    document.getElementById('assetDesc').value = '';
+    document.getElementById('assetVendor').value = '';
+    document.querySelectorAll('.asset-item').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.urgency-btn').forEach(b => b.classList.remove('sel'));
+    document.getElementById('detailArea').style.display = 'none';
+    document.getElementById('selectedSummary').style.display = 'none';
+    document.getElementById('btnConfirm').disabled = true;
+
+    document.getElementById('assetModal').classList.add('open');
+  }
+
+  function closeAssetModal() {
+    document.getElementById('assetModal').classList.remove('open');
+  }
+
+  function toggleAsset(el, key) {
+    if (selectedAssets.has(key)) {
+      selectedAssets.delete(key);
+      el.classList.remove('selected');
+    } else {
+      selectedAssets.add(key);
+      el.classList.add('selected');
+    }
+    updateAssetModal();
+  }
+
+  function updateAssetModal() {
+    const hasSelection = selectedAssets.size > 0;
+    document.getElementById('detailArea').style.display = hasSelection ? 'block' : 'none';
+    document.getElementById('selectedSummary').style.display = hasSelection ? 'block' : 'none';
+    document.getElementById('btnConfirm').disabled = !hasSelection;
+    document.getElementById('selectedCount').textContent = `(${selectedAssets.size}개 선택됨)`;
+
+    // 요약 칩
+    const chips = [...selectedAssets].map(k =>
+      `<span class="summary-chip">✓ ${ASSET_LABELS[k]||k}</span>`
+    ).join('');
+    document.getElementById('summaryChips').innerHTML = chips;
+  }
+
+  function selectUrgency(btn, level) {
+    document.querySelectorAll('.urgency-btn').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    urgency = level;
+  }
+
+  function confirmAsset() {
+    if (selectedAssets.size === 0) return;
+    const desc    = document.getElementById('assetDesc').value.trim();
+    const vendor  = document.getElementById('assetVendor').value.trim();
+    const now     = new Date();
+    const timeStr = `오후 ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const id      = ++idCounter;
+
+    const urgencyMap = { high:'🔴 긴급', mid:'🟡 보통', low:'🟢 여유' };
+
+    requestItems.push({
+      id, type: 'asset', isAsset: true,
+      assets: [...selectedAssets],
+      desc: desc + (vendor ? ` / 업체: ${vendor}` : ''),
+      urgency, urgencyLabel: urgency ? urgencyMap[urgency] : null,
+      time: timeStr
+    });
+
+    renderList();
+    closeAssetModal();
+
+    // 사이드 버튼 강조
+    document.getElementById('catAsset').classList.add('active');
+    setTimeout(() => document.getElementById('catAsset').classList.remove('active'), 1500);
+
+    showToast(`✅ #${id} 홈페이지 자산관련 요청이 추가되었습니다 (${selectedAssets.size}개 항목)`);
+  }
+
+  /* ── 토스트 ── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  /* ESC 로 모달 닫기 */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAssetModal();
+  });
+
+  /* 오버레이 클릭 닫기 */
+  document.getElementById('assetModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAssetModal();
+  });
+
+  /* 초기 샘플 데이터 */
+  (function initSample() {
+    idCounter = 4;
+    requestItems = [
+      { id:4, type:'dev', label:'기능 개발', memo:'메모 2개', time:'오후 2:10', isAsset:false }
+    ];
+    renderList();
+  })();
+</script>
+</body>
+</html>

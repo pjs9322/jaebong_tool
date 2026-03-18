@@ -2,13 +2,81 @@
  * @file canvas.js
  * @description 메인 캔버스 (워크 스페이스) 제어, 좌표계산, 드로잉, 박스 생성 및 메모 작성을 처리하는 코어 모듈
  */
-import { S, COLORS } from '../store/state.js';
+import { S, COLORS, IMG_ICON } from '../store/state.js';
 import { UI } from '../store/elements.js';
-import { triggerAutoSave, updateSaveBtnState } from './history.js';
+import { updateSaveBtnState } from './history.js';
+import { GTM } from '../util/gtm.js';
 
 export function generateQR(url) {
     // QR 생성 로직 완전 제거 (Task 002 반영)
     return;
+}
+
+export function enterAssetMode() {
+    S.isAssetMode = true;
+    S.img = null;
+    S.baseImgSrc = null;
+    S.annos = [];
+    S.selectedAssets.clear();
+    UI.assetItems.forEach(i => i.classList.remove('selected'));
+
+    UI.cWrap.style.display = 'block';
+    UI.cWrap.style.width = '100%';
+    UI.cWrap.style.height = '100%';
+    UI.cWrap.style.maxWidth = 'none';
+    UI.cWrap.style.minHeight = '0';
+    UI.cWrap.style.margin = '0';
+    UI.cWrap.style.boxShadow = 'none';
+    UI.scrollContainer.style.padding = '0';
+    
+    if (UI.canvasControls) UI.canvasControls.style.display = 'flex';
+    UI.urlIn.value = ''; // 신규 자산 요청 시 초기화
+    
+    UI.canvas.style.display = 'none';
+    UI.assetModeOverlay.style.display = 'flex'; // 중앙 정렬을 위해 flex 사용
+    UI.minimapContainer.style.display = 'none';
+    UI.btnAttachMemoImg.style.display = 'none'; // 자산 모드 숨김
+    UI.annoList.style.display = 'none';           // 자산 모드 숨김
+
+    UI.guideText.innerHTML = `🏠 <b>자산 관련 요청 모드</b><br>필요한 항목을 선택하고 아래에<br>상세 내용을 입력해 주세요.`;
+    
+    UI.reqDesc.value = '';
+    UI.reqDesc.placeholder = `선택한 자산(도메인, 호스팅 등)에 대한 상세 상황을 입력해 주세요.
+예시) 도메인 만료일이 다가옵니다, 호스팅 서버 이전이 필요합니다, 계정 정보를 분실했습니다.`;
+
+    render();
+}
+
+export function exitAssetMode() {
+    S.isAssetMode = false;
+    S.selectedAssets.clear();
+    UI.assetItems.forEach(i => i.classList.remove('selected'));
+    UI.assetModeOverlay.style.display = 'none';
+    UI.canvas.style.display = 'block';
+    UI.btnAttachMemoImg.style.display = 'block';
+    UI.annoList.style.display = 'block';
+    
+    // 스타일 초기화 (이미지 로드 시 재설정됨)
+    UI.cWrap.style.width = '';
+    UI.cWrap.style.maxWidth = '';
+    UI.cWrap.style.height = '';
+    UI.cWrap.style.minHeight = '';
+    UI.cWrap.style.margin = '';
+    UI.cWrap.style.boxShadow = '';
+    UI.scrollContainer.style.padding = '';
+    
+    if (UI.canvasControls) UI.canvasControls.style.display = 'none';
+    UI.urlIn.value = ''; // 일반 모드 복귀 시 초기화
+
+    if (!S.img) {
+        UI.cWrap.style.display = 'none';
+    }
+    UI.guideText.innerHTML = `<b>캔버스</b>에서 수정하고 싶은 부분을<br>마우스로 드래그하여 박스를 그려주세요.<br><br>
+                        <span style="font-size:11px; color:var(--action-pink);">(박스를 클릭하면 다시 수정할 수 있습니다)</span>`;
+    UI.reqDesc.value = ''; // 작성 내용 파기
+    UI.reqDesc.placeholder = `이 페이지에 대한 전체적인 참고사항을 입력하세요.
+예시) 이미지는 추후 전달드리겠습니다, 이미지 직접 수급 부탁드립니다, www.susunzip.com 해당 레퍼런스 참고하여 디자인 리뉴얼 부탁드립니다.`;
+    resetMemoPanel(false);
 }
 
 export function resetMemoPanel(autoSave) {
@@ -20,8 +88,11 @@ export function resetMemoPanel(autoSave) {
     S.draftRect = null;
     UI.memoPanel.classList.remove('active');
     UI.guideText.style.display = 'block';
+    UI.memoInput.value = '';
+    S.memoImg = null;
+    UI.memoImgPreview.src = '';
+    UI.memoImgPreviewArea.style.display = 'none';
     updateAnnoListUI();
-    if (autoSave) triggerAutoSave(); // (Task 001) 박스 그리기 및 메모 작성, 삭제 후 자동저장 시도
 }
 
 export function openEditPanel(id) {
@@ -33,6 +104,16 @@ export function openEditPanel(id) {
     UI.confirmMemoBtn.innerText = "수정 완료";
     UI.deleteMemoBtn.style.display = 'block';
     UI.memoInput.value = anno.text;
+    if (anno.img) {
+        S.memoImg = anno.img;
+        UI.memoImgPreview.src = anno.img;
+        UI.memoImgPreviewArea.style.display = 'block';
+    } else {
+        S.memoImg = null;
+        UI.memoImgPreview.src = '';
+        UI.memoImgPreviewArea.style.display = 'none';
+    }
+    GTM.push('memo_edit', { request_item_id: id });
     updateAnnoListUI();
     render();
 }
@@ -42,7 +123,8 @@ export function updateAnnoListUI() {
     S.annos.forEach((a, i) => {
         const el = document.createElement('div');
         el.className = 'anno-item' + (S.activeAnnoId === a.id ? ' selected' : '');
-        el.innerHTML = `<div class="anno-badge">${i + 1}</div><div class="anno-text">${a.text}</div>`;
+        const imgIcon = a.img ? `<span style="color:#8b5cf6; margin-left:6px; display:inline-flex; align-items:center;">${IMG_ICON}</span>` : '';
+        el.innerHTML = `<div class="anno-badge">${i + 1}</div><div class="anno-text">${a.text}${imgIcon}</div>`;
         el.onclick = () => { resetMemoPanel(true); openEditPanel(a.id); };
         UI.annoList.appendChild(el);
     });
@@ -56,34 +138,66 @@ export function render(isExport = false) {
     const ctx = UI.ctx;
     ctx.clearRect(0, 0, S.w, S.h);
     ctx.drawImage(S.img, 0, 0);
-    const sf = 1 / (S.zoom / 100);
-    const br = 16 * sf;
-    const fs = 15 * sf;
-    const lw = 4 * sf;
+    const sf = isExport ? 1 : 1 / (S.zoom / 100);
+    const br = 18 * sf; // 반지름 18px로 상향
+    const fs = 14 * sf; // 폰트 크기도 14px로 상향
+    const lw = 2 * sf;
     const boxColor = COLORS.box;
+    // 1st Pass: Draw all rectangle borders ONLY
     S.annos.forEach((a, i) => {
         const active = S.activeAnnoId === a.id && !isExport;
-        ctx.strokeStyle = active ? COLORS.draft : boxColor;
+        ctx.strokeStyle = active ? COLORS.draft : (a.img ? COLORS.purple : boxColor);
         ctx.lineWidth = lw;
+        
         if (active) {
             ctx.fillStyle = 'rgba(59,130,246,0.1)';
             ctx.fillRect(a.rect.x, a.rect.y, a.rect.w, a.rect.h);
         }
-        ctx.strokeRect(a.rect.x, a.rect.y, a.rect.w, a.rect.h);
-        ctx.fillStyle = active ? COLORS.draft : boxColor;
+
+        // 선이 배지(원) 영역에 침범하지 않도록 경로를 끊어서 그림
+        ctx.beginPath();
+        // 상단 선 (왼쪽에서 br만큼 떨어진 지점부터 오른쪽 끝까지)
+        ctx.moveTo(a.rect.x + br, a.rect.y);
+        ctx.lineTo(a.rect.x + a.rect.w, a.rect.y);
+        // 우측 선
+        ctx.lineTo(a.rect.x + a.rect.w, a.rect.y + a.rect.h);
+        // 하단 선
+        ctx.lineTo(a.rect.x, a.rect.y + a.rect.h);
+        // 좌측 선 (하단에서 위로 올라오되, 상단에서 br만큼 떨어진 지점까지만)
+        ctx.lineTo(a.rect.x, a.rect.y + br);
+        ctx.stroke();
+    });
+
+    // 2nd Pass: Draw all point badges (Circles + Numbers) on top of all lines
+    S.annos.forEach((a, i) => {
+        const active = S.activeAnnoId === a.id && !isExport;
+        
+        // 원 배지 그리기
+        ctx.fillStyle = active ? COLORS.draft : (a.img ? COLORS.purple : boxColor);
         ctx.beginPath();
         ctx.arc(a.rect.x, a.rect.y, br, 0, Math.PI * 2);
         ctx.fill();
+        
+        // 배지 테두리 (선택 시 강조)
+        if (active) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2 * sf;
+            ctx.stroke();
+        }
+
+        // 숫자 텍스트
         ctx.fillStyle = '#fff';
         ctx.font = `bold ${fs}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(i + 1, a.rect.x, a.rect.y + (1 * sf));
     });
+
     if (S.draftRect && !isExport) {
         ctx.strokeStyle = COLORS.draft;
         ctx.lineWidth = lw;
         ctx.setLineDash([8 * sf, 8 * sf]);
+        ctx.beginPath();
         ctx.strokeRect(S.draftRect.x, S.draftRect.y, S.draftRect.w, S.draftRect.h);
         ctx.setLineDash([]);
     }
@@ -157,19 +271,73 @@ function renderMinimap() {
 export function initCanvas() {
     UI.catBtns.forEach(btn => {
         btn.onclick = () => {
+            const targetVal = btn.dataset.val;
+
+            // 자산 모드 전환/복구 관련 정책 적용 (Task 014)
+            if (targetVal === 'asset' && !S.isAssetMode) {
+                // 일반 -> 자산 전환
+                if (S.img || S.annos.length > 0 || UI.reqDesc.value.trim() !== '') {
+                    if (!confirm("자산 관련 요청으로 전환하시겠습니까? 작성 중인 내용(이미지, 메모 포함)이 모두 파기됩니다.")) return;
+                }
+                enterAssetMode();
+            } else if (targetVal !== 'asset' && S.isAssetMode) {
+                // 자산 -> 일반 전환
+                if (S.selectedAssets.size > 0 || UI.reqDesc.value.trim() !== '') {
+                    if (!confirm("일반 요청으로 전환하시겠습니까? 선택한 자산 항목과 작성된 내용이 모두 파기됩니다.")) return;
+                }
+                exitAssetMode();
+            }
+
             UI.catBtns.forEach(b => {
                 b.classList.remove('active');
                 b.classList.remove('invalid-target');
             });
             btn.classList.add('active');
-            S.currentCategory = btn.dataset.val;
+            S.currentCategory = targetVal;
             updateSaveBtnState();
         };
     });
 
+    // 자산 아이템 토글 (Task 014)
+    if (UI.assetItems) {
+        UI.assetItems.forEach(item => {
+            item.onclick = () => {
+                const key = item.dataset.key;
+                if (S.selectedAssets.has(key)) {
+                    S.selectedAssets.delete(key);
+                    item.classList.remove('selected');
+                } else {
+                    S.selectedAssets.add(key);
+                    item.classList.add('selected');
+                }
+                updateSaveBtnState();
+            };
+        }
+    );
+    }
+
+    // --- 메모 이미지 첨부 로직 ---
+    UI.btnAttachMemoImg.onclick = () => UI.memoFileIn.click();
+    UI.memoFileIn.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            S.memoImg = ev.target.result;
+            UI.memoImgPreview.src = S.memoImg;
+            UI.memoImgPreviewArea.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+        UI.memoFileIn.value = ''; // 재선택 가능하도록 초기화
+    };
+    UI.btnDelMemoImg.onclick = () => {
+        S.memoImg = null;
+        UI.memoImgPreview.src = '';
+        UI.memoImgPreviewArea.style.display = 'none';
+    };
+
     UI.urlIn.addEventListener('input', (e) => {
         // generateQR(e.target.value); // (Task 002)
-        triggerAutoSave(); // URL 입력 시 자동저장 (Task 001)
     });
 
     // --- 미니맵 인터랙션 구현 ---
@@ -250,7 +418,7 @@ export function initCanvas() {
     }
 
     window.onmousemove = (e) => {
-        if (!S.img) return;
+        if (!S.img || S.isAssetMode) return;
         const p = getPos(e);
         let cursor = 'crosshair';
         if (S.state === 'DRAWING') {
@@ -290,7 +458,7 @@ export function initCanvas() {
             const a = S.annos.find(x => x.id === S.activeAnnoId);
             if (a) {
                 const hit = hitCheck(p, a.rect);
-                if (hit) cursor = (hit === 'move' ? 'move' : hit + '-resize');
+                if (hit) cursor = (hit === 'move' ? 'pointer' : hit + '-resize');
             }
         } else {
             const h = [...S.annos].reverse().find(a => p.x >= a.rect.x && p.x <= a.rect.x + a.rect.w && p.y >= a.rect.y && p.y <= a.rect.y + a.rect.h);
@@ -300,7 +468,7 @@ export function initCanvas() {
     };
 
     UI.canvas.onmousedown = (e) => {
-        if (!S.img || S.state === 'MEMO_WAIT') return;
+        if (!S.img || S.state === 'MEMO_WAIT' || S.isAssetMode) return;
         const p = getPos(e);
         if (S.activeAnnoId) {
             const a = S.annos.find(x => x.id === S.activeAnnoId);
@@ -328,6 +496,7 @@ export function initCanvas() {
         S.state = 'DRAWING';
         S.dragStart = p;
         S.draftRect = { x: p.x, y: p.y, w: 0, h: 0 };
+        GTM.push('box_draw_start');
         render();
     };
 
@@ -342,6 +511,11 @@ export function initCanvas() {
                 UI.deleteMemoBtn.style.display = 'none';
                 UI.memoInput.value = '';
                 UI.memoInput.focus();
+                GTM.push('box_draw_complete', { 
+                    box_width: Math.round(S.draftRect.w),
+                    box_height: Math.round(S.draftRect.h)
+                });
+                GTM.push('memo_create_start');
             } else {
                 S.state = 'IDLE';
                 S.draftRect = null;
@@ -360,27 +534,37 @@ export function initCanvas() {
             UI.memoInput.focus();
             return;
         }
+
+        const isNew = !S.activeAnnoId;
+        GTM.push('memo_create_complete', {
+            memo_length: txt.length,
+            has_image: !!S.memoImg,
+            is_new: isNew
+        });
+
         if (S.activeAnnoId) {
             const a = S.annos.find(x => x.id === S.activeAnnoId);
-            if (a) a.text = txt;
+            if (a) {
+                a.text = txt;
+                a.img = S.memoImg;
+            }
             S.activeAnnoId = null;
         } else {
-            S.annos.push({ id: Date.now(), rect: { ...S.draftRect }, text: txt });
+            S.annos.push({ id: Date.now(), rect: { ...S.draftRect }, text: txt, img: S.memoImg });
         }
         resetMemoPanel(false);
         updateAnnoListUI();
         render();
-        triggerAutoSave(); // 메모 추가 확인 시 자동저장
     };
 
     UI.deleteMemoBtn.onclick = () => {
         if (confirm("삭제하시겠습니까?")) {
             S.annos = S.annos.filter(a => a.id !== S.activeAnnoId);
+            GTM.push('memo_delete', { memo_id: S.activeAnnoId });
             S.activeAnnoId = null;
             resetMemoPanel(false);
             updateAnnoListUI();
             render();
-            triggerAutoSave(); // 메모 삭제 시 자동저장
         }
     };
 

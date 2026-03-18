@@ -49,6 +49,7 @@ export function initUI() {
     UI.cWrap = document.getElementById('canvasWrapper');
     UI.scrollContainer = document.getElementById('scrollContainer');
     UI.btnZoom = document.getElementById('toggleZoomBtn');
+    UI.canvasControls = document.querySelector('.canvas-controls');
 
     // =========================================================
     // 🔗 5. URL + QR System
@@ -61,6 +62,9 @@ export function initUI() {
     // 🏷️ 6. Category Buttons
     // =========================================================
     UI.catBtns = document.querySelectorAll('.cat-btn');
+    UI.catAssetBtn = document.getElementById('catAssetBtn');
+    UI.assetModeOverlay = document.getElementById('assetModeOverlay');
+    UI.assetItems = document.querySelectorAll('.asset-item');
 
     // =========================================================
     // 💾 7. Save / Edit Controls
@@ -82,6 +86,12 @@ export function initUI() {
     UI.cancelMemoBtn = document.getElementById('cancelMemoBtn');
     UI.deleteMemoBtn = document.getElementById('deleteMemoBtn');
 
+    UI.btnAttachMemoImg = document.getElementById('btnAttachMemoImg');
+    UI.memoFileIn = document.getElementById('memoFileIn');
+    UI.memoImgPreviewArea = document.getElementById('memoImgPreviewArea');
+    UI.memoImgPreview = document.getElementById('memoImgPreview');
+    UI.btnDelMemoImg = document.getElementById('btnDelMemoImg');
+
     UI.annoList = document.getElementById('annoList');
 
     // =========================================================
@@ -95,6 +105,16 @@ export function initUI() {
     // =========================================================
     UI.viewContentArea = document.getElementById('viewContentArea');
     UI.viewDate = document.getElementById('viewDate');
+    
+    // Viewer UI Elements (Popups, Overlays)
+    UI.imageModalViewer = document.getElementById('imageModalViewer');
+    UI.viewerModalImg = document.getElementById('viewerModalImg');
+    UI.closeViewerModal = document.getElementById('closeViewerModal');
+    UI.viewerAnnoOverlay = document.getElementById('viewerAnnoOverlay');
+    UI.viewerMemoTooltip = document.getElementById('viewerMemoTooltip');
+    UI.viewerMobileBottomSheet = document.getElementById('viewerMobileBottomSheet');
+    UI.btnCloseSheet = document.getElementById('btnCloseSheet');
+    UI.viewerSheetContent = document.getElementById('viewerSheetContent');
 
     // =========================================================
     // 💬 11. Chat System (PRO)
@@ -107,6 +127,7 @@ export function initUI() {
     // 🎓 12. Tutorial Overlay (LITE)
     // =========================================================
     UI.tutOverlay = document.getElementById('tutorialOverlay');
+    UI.tutBg = document.getElementById('tutorialBg');
     UI.tutSpot = document.getElementById('tutSpot');
     UI.tutCard = document.getElementById('tutCard');
     UI.tutStep = document.getElementById('tutStep');

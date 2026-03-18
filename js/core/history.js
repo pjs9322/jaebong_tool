@@ -2,50 +2,68 @@
  * @file history.js
  * @description 캔버스에서 작업한 내역을 '요청사항 리스트' (History)에 저장, 수정, 삭제 및 관리하는 상태 코어 모듈
  */
-import { S } from '../store/state.js';
+import { S, IMG_ICON } from '../store/state.js';
 import { UI } from '../store/elements.js';
 import { loadImage } from '../utils/imageLoader.js';
-import { render, resetMemoPanel, updateAnnoListUI, generateQR } from './canvas.js';
+import { render, resetMemoPanel, updateAnnoListUI, generateQR, enterAssetMode, exitAssetMode } from './canvas.js';
 import { SyncAPI } from '../util/api.js';
+import { GTM } from '../util/gtm.js';
 
-let autoSaveTimer = null;
-export function triggerAutoSave() {
-    if (S.isViewerMode) return;
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(async () => {
-        if (!S.docId || !S.editToken) return;
-        const payload = {
-            history: S.history,
-            draft: {
-                annos: S.annos,
-                url: UI.urlIn.value,
-                desc: UI.reqDesc.value,
-                baseImgSrc: (S.img && UI.cWrap.style.display !== 'none') ? S.baseImgSrc : null
-            }
-        };
-        const historyJson = JSON.stringify(payload);
-        console.log('[Sync] autoSaveTimer triggers syncDocument:', historyJson);
-        const res = await SyncAPI.syncDocument(S.docId, S.editToken, historyJson);
-        console.log('[Sync] autoSave result:', res);
-        if (res && res.success) {
-            console.log('클라우드에 실시간 자동 저장 완료:', res.updated_at);
-        } else {
-            console.error('클라우드 자동 저장 실패:', res);
+const ASSET_LABELS = {
+    domain: '도메인', hosting: '호스팅', server: '서버', ssl: 'SSL 인증서',
+    migration: '사이트 이전', db: 'DB 이전', backup: '백업/복구',
+    'site-access': '사이트 접속 불가', 'admin-access': '관리자 분실', 'account-lost': '계정/비번 분실'
+};
+
+export async function syncHistoryToServer() {
+    if (!S.docId || !S.editToken) return;
+    const payload = {
+        history: S.history,
+        draft: {
+            annos: S.annos,
+            url: UI.urlIn.value,
+            desc: UI.reqDesc.value,
+            baseImgSrc: (S.img && UI.cWrap.style.display !== 'none') ? S.baseImgSrc : null
         }
-    }, 1500);
+    };
+    const historyJson = JSON.stringify(payload);
+    console.log('[Sync] syncHistoryToServer called:', historyJson);
+    const res = await SyncAPI.syncDocument(S.docId, S.editToken, historyJson);
+    console.log('[Sync] sync result:', res);
+    if (res && res.success) {
+        console.log('클라우드 서버 동기화 완료:', res.updated_at);
+    } else {
+        console.error('클라우드 서버 동기화 실패:', res);
+    }
+    return res;
 }
 
 export function clearEditingState() {
+    if (S.isAssetMode) {
+        exitAssetMode();
+    }
     S.editingHistoryId = null;
     UI.saveReqBtn.innerText = "← 리스트 추가하기";
     UI.saveReqBtn.style.background = "var(--action-pink)";
     UI.cancelEditBtn.style.display = 'none';
     UI.catBtns.forEach(btn => btn.classList.remove('invalid-target'));
+    if (S.isAssetMode) {
+        S.isAssetMode = false;
+        S.selectedAssets.clear();
+        UI.assetItems.forEach(i => i.classList.remove('selected'));
+        UI.assetModeOverlay.style.display = 'none';
+        resetMemoPanel(false);
+    }
     renderQueue();
 }
 
 export function updateSaveBtnState() {
-    const hasContent = (S.img && UI.cWrap.style.display !== 'none') || UI.reqDesc.value.trim() !== '';
+    let hasContent = false;
+    if (S.isAssetMode) {
+        hasContent = S.selectedAssets.size > 0;
+    } else {
+        hasContent = (S.img && UI.cWrap.style.display !== 'none') || UI.reqDesc.value.trim() !== '';
+    }
     UI.saveReqBtn.disabled = !hasContent;
 }
 
@@ -66,19 +84,38 @@ export function renderQueue() {
     S.history.slice().reverse().forEach((h, i) => {
         const d = document.createElement('div');
         d.className = 'req-card' + (S.editingHistoryId === h.id ? ' editing' : '');
-        const catMap = { text: '📝 내용 수정', layout: '📐 항목 추가', func: '🛠️ 기능 수정', image: '✨ 기능 개발' };
-        d.innerHTML = `
-            <div style="display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-bottom:6px;">
-                <span>#${S.history.length - i} • ${h.date}</span>
-                <div style="display:flex; gap:4px;"><button class="btn-std" style="padding:2px 6px; font-size:10px;">수정</button><button class="btn-std" style="padding:2px 6px; font-size:10px; color:var(--danger);">삭제</button></div>
-            </div>
-            <div style="display:flex; gap:6px; margin-bottom:8px;">
-                <span class="tag">${catMap[h.category]}</span>
-                ${h.annos.length > 0 ? `<span class="tag" style="background:#fff; border:1px solid #ddd;">메모 ${h.annos.length}개</span>` : ''}
-            </div>
-            ${h.thumb ? `<img src="${h.thumb}" style="margin-bottom:8px;">` : ''}
-            ${h.desc ? `<div style="font-size:12px; color:#555; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-break:break-all;">${h.desc}</div>` : ''}
-        `;
+        const catMap = { text: '📝 내용 수정', layout: '📐 항목 추가', func: '🛠️ 기능 수정', image: '✨ 기능 개발', asset: '🏠 자산 관련' };
+        
+        if (h.isAsset) {
+            const assetList = (h.assets || []).map(a => `<div style="display:flex; align-items:center; gap:4px; font-size:11px; color:#666;"><span style="width:4px; height:4px; border-radius:50%; background:var(--action-pink);"></span>${ASSET_LABELS[a] || a}</div>`).join('');
+            d.innerHTML = `
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-bottom:6px;">
+                    <span>#${S.history.length - i} • ${h.date}</span>
+                    <div style="display:flex; gap:4px;"><button class="btn-std" style="padding:2px 6px; font-size:10px;">수정</button><button class="btn-std" style="padding:2px 6px; font-size:10px; color:var(--danger);">삭제</button></div>
+                </div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <span class="tag" style="border-color:var(--action-pink); color:var(--action-pink); background:#fff5f9;">${catMap[h.category]}</span>
+                </div>
+                <div style="background:#f9fafb; border-radius:8px; padding:10px; margin-bottom:8px; border:1px solid #f3f4f6;">
+                    ${assetList}
+                </div>
+                ${h.desc ? `<div style="font-size:12px; color:#555; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-break:break-all;">${h.desc}</div>` : ''}
+            `;
+        } else {
+            d.innerHTML = `
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-bottom:6px;">
+                    <span>#${S.history.length - i} • ${h.date}</span>
+                    <div style="display:flex; gap:4px;"><button class="btn-std" style="padding:2px 6px; font-size:10px;">수정</button><button class="btn-std" style="padding:2px 6px; font-size:10px; color:var(--danger);">삭제</button></div>
+                </div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                    <span class="tag">${catMap[h.category]}</span>
+                    ${h.annos.length > 0 ? `<span class="tag" style="background:#fff; border:1px solid #ddd;">메모 ${h.annos.length}개</span>` : ''}
+                    ${h.annos.some(a => a.img) ? `<span class="tag" style="background:#fff; border:1px solid #8b5cf6; color:#8b5cf6; display:inline-flex; align-items:center; gap:2px;">${IMG_ICON} 사진</span>` : ''}
+                </div>
+                ${h.thumb ? `<img src="${h.thumb}" style="margin-bottom:8px;">` : ''}
+                ${h.desc ? `<div style="font-size:12px; color:#555; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-break:break-all;">${h.desc}</div>` : ''}
+            `;
+        }
         d.querySelectorAll('button')[0].onclick = () => { // 수정
             const isEditing = S.editingHistoryId !== null;
             const hasDraft = (S.img && UI.cWrap.style.display !== 'none') || S.annos.length > 0 || UI.reqDesc.value !== '';
@@ -109,22 +146,44 @@ export function renderQueue() {
                 updateSaveBtnState();
             };
 
-            if (h.baseImgSrc) {
-                loadImage(h.baseImgSrc, setupEditState);
+            if (h.isAsset) {
+                enterAssetMode();
+                S.selectedAssets = new Set(h.assets || []);
+                UI.assetItems.forEach(i => {
+                    i.classList.toggle('selected', S.selectedAssets.has(i.dataset.key));
+                });
+                
+                UI.urlIn.value = h.url || '';
+                UI.reqDesc.value = h.desc || '';
+                S.currentCategory = 'asset';
+                UI.catBtns.forEach(b => b.classList.toggle('active', b.dataset.val === 'asset'));
+                
+                UI.saveReqBtn.innerText = "수정 완료 (덮어쓰기)";
+                UI.saveReqBtn.style.background = "#10b981";
+                UI.cancelEditBtn.style.display = 'block';
+                
+                updateSaveBtnState();
             } else {
-                S.img = null;
-                S.baseImgSrc = null;
-                UI.cWrap.style.display = 'none';
-                UI.ctx.clearRect(0, 0, S.w, S.h);
-                setupEditState();
+                if (S.isAssetMode) exitAssetMode(); // 자산 모드였다면 해제
+
+                if (h.baseImgSrc) {
+                    loadImage(h.baseImgSrc, setupEditState);
+                } else {
+                    S.img = null;
+                    S.baseImgSrc = null;
+                    UI.cWrap.style.display = 'none';
+                    UI.ctx.clearRect(0, 0, S.w, S.h);
+                    setupEditState();
+                }
             }
         };
-        d.querySelectorAll('button')[1].onclick = () => {
+        d.querySelectorAll('button')[1].onclick = async () => {
             if (!confirm("정말 요청사항을 삭제하시겠습니까?")) return;
             S.history = S.history.filter(x => x.id !== h.id);
             if (S.editingHistoryId === h.id) clearEditingState();
             renderQueue();
-            triggerAutoSave();
+            GTM.push('request_item_delete', { request_item_id: h.id });
+            await syncHistoryToServer(); // 삭제 시에는 딜레이 없이 즉시 서버 동기화 (Task 001)
             if (S.history.length === 0) {
                 UI.exportBtn.disabled = true;
                 UI.shareBtn.disabled = true;
@@ -137,12 +196,13 @@ export function renderQueue() {
 export function initHistory() {
     UI.reqDesc.oninput = () => {
         updateSaveBtnState();
-        triggerAutoSave(); // 설명 입력시 자동저장 트리거 (Task 001)
     };
 
     UI.saveReqBtn.onclick = async () => {
         if (!S.currentCategory) {
-            UI.catBtns.forEach(btn => btn.classList.add('invalid-target'));
+            UI.catBtns.forEach(btn => {
+                if (btn.id !== 'catAssetBtn') btn.classList.add('invalid-target');
+            });
             alert("요청사항 유형(카테고리)을 선택해 주세요.");
             return;
         }
@@ -154,7 +214,7 @@ export function initHistory() {
         }
         const hasImage = S.img && UI.cWrap.style.display !== 'none';
 
-        if (S.annos.length === 0) {
+        if (S.annos.length === 0 && !S.isAssetMode) {
             const confirmMsg = !hasImage ? "이미지와 메모 없이 저장하시겠습니까?" : "메모 없이 저장하시겠습니까?";
             if (!confirm(confirmMsg)) return;
         }
@@ -206,15 +266,24 @@ export function initHistory() {
         thumb = full; // Omit separate thumb upload to save storage. Use full image for thumbnails via CSS.
         baseImgSrc = await uploadBase64(baseImgSrc);
 
+        // Upload memo images
+        for (let a of S.annos) {
+            if (a.img && a.img.startsWith('data:image')) {
+                a.img = await uploadBase64(a.img);
+            }
+        }
+
         const data = {
             id: Date.now(),
             date: new Date().toLocaleTimeString(),
             thumb, full,
             baseImgSrc,
-            annos: JSON.parse(JSON.stringify(S.annos)),
+            annos: S.isAssetMode ? [] : JSON.parse(JSON.stringify(S.annos)),
             url: UI.urlIn.value,
             desc: UI.reqDesc.value,
             category: S.currentCategory,
+            isAsset: S.isAssetMode,
+            assets: S.isAssetMode ? Array.from(S.selectedAssets) : [],
             status: 'request'
         };
 
@@ -222,15 +291,17 @@ export function initHistory() {
             const idx = S.history.findIndex(x => x.id === S.editingHistoryId);
             if (idx !== -1) S.history[idx] = data;
             alert("수정 완료되었습니다.");
+            GTM.push('request_item_edit', { request_item_id: S.editingHistoryId });
         } else {
             S.history.push(data);
             alert("저장되었습니다.");
 
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'request_added', {
-                    event_category: 'Request'
-                });
-            }
+            GTM.push('request_item_save', {
+                category: S.currentCategory,
+                request_count_total: S.history.length,
+                memo_count_total: S.annos.length,
+                is_asset: S.isAssetMode
+            });
         }
 
         clearEditingState();
@@ -257,27 +328,10 @@ export function initHistory() {
         UI.shareBtn.disabled = false;
         renderQueue();
 
-        // 사용자가 명시적으로 [리스트 추가]를 눌렀으므로 타이머 없이 즉시 클라우드에 강제 동기화 (새로고침으로 인한 증발 방지)
+        // 사용자가 명시적으로 [리스트 추가]를 눌렀으므로 타이머 없이 즉시 클라우드에 강제 동기화 (Task 001)
         if (S.docId && S.editToken) {
             UI.saveReqBtn.innerText = "서버 동기화 중...";
-            const payload = {
-                history: S.history,
-                draft: {
-                    annos: S.annos,
-                    url: UI.urlIn.value,
-                    desc: UI.reqDesc.value,
-                    baseImgSrc: (S.img && UI.cWrap.style.display !== 'none') ? S.baseImgSrc : null
-                }
-            };
-            const histStr = JSON.stringify(payload);
-            console.log('[Sync] Immediate syncDocument called:', histStr);
-            const res = await SyncAPI.syncDocument(S.docId, S.editToken, histStr);
-            console.log('[Sync] Immediate sync result:', res);
-            if (res && res.success) {
-                console.log('명시적 즉시 저장 완료:', res.updated_at);
-            } else {
-                console.error('명시적 즉시 저장 실패:', res);
-            }
+            await syncHistoryToServer();
         }
         UI.saveReqBtn.innerText = "← 리스트 추가하기";
         updateSaveBtnState();
@@ -316,6 +370,7 @@ export function initHistory() {
         UI.urlIn.value = '';
         UI.reqDesc.value = '';
         S.annos = [];
+        resetMemoPanel(false);
 
         // 카테고리 초기화
         S.currentCategory = null;
@@ -329,16 +384,9 @@ export function initHistory() {
 
         // 서버 동기화 처리
         if (S.docId && S.editToken) {
-            const payload = {
-                history: [],
-                draft: null // Clear any draft trace
-            };
-            const histStr = JSON.stringify(payload);
             console.log('[Sync] Resetting all progress on server...');
-            const res = await SyncAPI.syncDocument(S.docId, S.editToken, histStr);
-            if (res && res.success) {
-                console.log('초기화 상태 동기화 완료');
-            }
+            GTM.push('workspace_reset');
+            await syncHistoryToServer();
         }
     };
 }

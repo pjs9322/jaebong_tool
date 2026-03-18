@@ -6,6 +6,7 @@ import { S, COLORS } from '../store/state.js';
 import { UI } from '../store/elements.js';
 import { renderQueue, clearEditingState, updateSaveBtnState } from '../core/history.js';
 import { render, resetMemoPanel, updateAnnoListUI, generateQR } from '../core/canvas.js';
+import { GTM } from '../util/gtm.js';
 
 export function updateZoomMode() {
     if (!S.img) return;
@@ -28,6 +29,14 @@ export function loadImage(src, onLoadCallback) {
     img.crossOrigin = 'Anonymous'; // 외부 URL 이미지 처리를 위한 CORS 설정
 
     function finalizeLoad(finalImg, finalSrc) {
+        const elapsed = S.importStartTime ? (Date.now() - S.importStartTime) : 0;
+        GTM.push('page_import_success', { 
+            source_type: S.importSource || 'unknown',
+            elapsed_ms: elapsed
+        });
+        S.importStartTime = null;
+        S.importSource = null;
+
         S.img = finalImg;
         S.w = finalImg.naturalWidth;
         S.h = finalImg.naturalHeight;
@@ -59,10 +68,8 @@ export function loadImage(src, onLoadCallback) {
         }
         render();
         if (UI.urlIn.value) generateQR(UI.urlIn.value);
-
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'image_import', { event_category: 'Image' });
-        }
+        // GTM.push('image_import'); // page_import_success로 대체됨
+        GTM.push('canvas_view');
     }
 
     img.onload = () => {
@@ -125,6 +132,13 @@ export function initImageLoader() {
     // --- Capture & Load ---
     UI.btnScreenCapture.onclick = async () => {
         if (!checkUnsavedChanges()) return;
+        S.importStartTime = Date.now();
+        S.importSource = 'capture';
+        if (S.lastImportFailed) {
+            GTM.push('page_import_retry', { source_type: 'capture' });
+        }
+        S.lastImportFailed = false;
+        GTM.push('page_import_start', { source_type: 'capture' });
         try {
             const displayMediaOptions = { video: true, audio: false };
             let controller = null;
@@ -166,6 +180,14 @@ export function initImageLoader() {
         let targetUrl = UI.urlCaptureIn.value.trim();
         if (!targetUrl) return;
 
+        S.importStartTime = Date.now();
+        S.importSource = 'url';
+        if (S.lastImportFailed) {
+            GTM.push('page_import_retry', { source_type: 'url' });
+        }
+        S.lastImportFailed = false;
+        GTM.push('page_import_start', { source_type: 'url', url_domain: targetUrl });
+
         if (!/^https?:\/\//i.test(targetUrl)) {
             targetUrl = 'https://' + targetUrl;
         }
@@ -206,21 +228,45 @@ export function initImageLoader() {
         }
 
         try {
-            const CAPTURE_SERVER_URL = 'https://symbolic-marcella-somethinghow-c320645c.koyeb.app';
+            const CAPTURE_SERVER_URL = 'https://jaebongapi.cafe24.com';
             const requestUrl = `${CAPTURE_SERVER_URL}/capture?url=${encodeURIComponent(targetUrl)}`;
 
-            let response = await fetch(requestUrl);
+            // 60초 타임아웃 설정 (서버 자원 보호 및 UX 개선)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            let response = await fetch(requestUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             let data = await response.json();
 
             if (data.status === 'success' && data.data?.screenshot?.url) {
                 UI.urlIn.value = targetUrl;
                 loadImage(data.data.screenshot.url);
+                GTM.push('url_capture_complete', {
+                    target_url: targetUrl
+                });
             } else {
-                throw new Error(data.message || 'Custom Capture API failed to return image.');
+                const failReason = data.message || 'API failed';
+                S.lastImportFailed = true;
+                GTM.push('page_import_fail', {
+                    source_type: 'url',
+                    target_url: targetUrl,
+                    fail_reason: failReason
+                });
+                throw new Error(failReason);
             }
         } catch (err) {
             console.error('Capture err:', err);
-            alert('웹사이트 캡처에 완전히 실패했습니다. 사이트 로딩 속도가 너무 느리거나, 해당 홈페이지측에서 보안상 외부의 캡처 접근을 강력하게 차단해둔 상태일 수 있습니다.');
+            if (err.name === 'AbortError') {
+                S.lastImportFailed = true;
+                GTM.push('page_import_fail', { source_type: 'url', fail_reason: 'timeout' });
+                alert('캡처 시간이 너무 오래 소요되어 요청이 취소되었습니다. 잠시 후 다시 시도해주시거나, 페이지 주소를 확인해주세요.');
+            } else {
+                S.lastImportFailed = true;
+                GTM.push('page_import_fail', { source_type: 'url', fail_reason: 'render_error' });
+                alert('웹사이트 캡처에 완전히 실패했습니다. 사이트 로딩 속도가 너무 느리거나, 해당 홈페이지측에서 보안상 외부의 캡처 접근을 강력하게 차단해둔 상태일 수 있습니다.');
+            }
         } finally {
             clearInterval(msgInterval);
             UI.captureLayer.style.display = 'none';
@@ -252,6 +298,13 @@ export function initImageLoader() {
     UI.fileIn.onchange = (e) => {
         const f = e.target.files[0];
         if (!f) return;
+        S.importStartTime = Date.now();
+        S.importSource = 'upload';
+        if (S.lastImportFailed) {
+            GTM.push('page_import_retry', { source_type: 'upload' });
+        }
+        S.lastImportFailed = false;
+        GTM.push('page_import_start', { source_type: 'upload' });
         const r = new FileReader();
         r.onload = (ev) => loadImage(ev.target.result);
         r.readAsDataURL(f);
@@ -262,6 +315,13 @@ export function initImageLoader() {
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 if (!checkUnsavedChanges()) return;
+                S.importStartTime = Date.now();
+                S.importSource = 'paste';
+                if (S.lastImportFailed) {
+                    GTM.push('page_import_retry', { source_type: 'paste' });
+                }
+                S.lastImportFailed = false;
+                GTM.push('page_import_start', { source_type: 'paste' });
                 const f = items[i].getAsFile();
                 const r = new FileReader();
                 r.onload = (ev) => loadImage(ev.target.result);

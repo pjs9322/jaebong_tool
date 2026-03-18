@@ -349,6 +349,8 @@ button:disabled {
     font-weight: 700;
     transition: all 0.2s;
     border: 1px solid transparent;
+    position: relative;
+    /* 추가: 가상 요소 배치를 위한 기준점 */
 }
 
 .cat-btn:hover {
@@ -367,14 +369,38 @@ button:disabled {
 }
 
 .cat-btn.invalid-target {
-    box-shadow: 0 0 0 2px var(--action-pink);
-    animation: pulseBorder 1.5s infinite;
+    min-width: 0; /* 가상 요소에서 애니메이션 처리를 하므로 비어있지 않도록 조치 */
+}
+
+/* 물결이 번져나가는 효과를 위한 가상 요소 설정 */
+.cat-btn.invalid-target::before,
+.cat-btn.invalid-target::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 0px rgba(244, 63, 94, 0.7);
+    animation: pulseBorder 3s infinite cubic-bezier(0, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 1;
+    /* 버튼 내용 위에 그려지도록 설정 */
+}
+
+/* 두 번째 물결은 1.5초 뒤에 시작하여 완벽한 중첩 효과 부여 */
+.cat-btn.invalid-target::after {
+    animation-delay: 1.5s;
 }
 
 @keyframes pulseBorder {
-    0% { box-shadow: 0 0 0 2px var(--action-pink); }
-    50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.3); }
-    100% { box-shadow: 0 0 0 2px var(--action-pink); }
+    0% {
+        box-shadow: 0 0 0 0px rgba(244, 63, 94, 0.7);
+        opacity: 1;
+    }
+
+    100% {
+        box-shadow: 0 0 0 10px rgba(244, 63, 94, 0);
+        opacity: 0;
+    }
 }
 
 .canvas-area-wrapper {
@@ -557,22 +583,36 @@ canvas {
 #tutorialOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
     z-index: 9999;
     display: none;
+    pointer-events: none; /* Allow events through to children */
 }
+
+#tutorialBg {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    pointer-events: auto; /* Block events to elements behind the tutorial */
+    z-index: 1;
+}
+
+/* 마스킹을 통한 구멍 뚫기 효과는 JS에서 tutorialBg에 설정 */
 
 .tut-spotlight {
     position: absolute;
     border-radius: 12px;
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-    transition: all 0.4s ease;
-    pointer-events: none;
+    box-shadow: none; /* 개별 그림자 제거 (중첩 방지) */
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
     border: 2px solid var(--action-pink);
+    z-index: 10000;
+    opacity: 0; /* JS에서 1로 설정하여 나타나게 함 */
 }
 
 .tut-card {
+    pointer-events: auto;
     position: absolute;
+    z-index: 10100; /* 스포트라이트보다 위에 배치 */
     width: 320px;
     background: #fff;
     padding: 24px;
@@ -663,5 +703,145 @@ canvas {
 @media screen and (max-width: 768px) {
     .minimap-container {
         display: none !important;
+    }
+}
+
+/* --- Asset Mode Overlay --- */
+.asset-mode-overlay {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    z-index: 50;
+    overflow-y: auto;
+    /* 최소 높이 미달 시 스크롤 허용 */
+    padding: 16px;
+    animation: fadeInMode 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    display: none;
+    align-items: center;
+    /* 기본은 중앙 정렬 */
+    justify-content: center;
+}
+
+.asset-grid-container {
+    width: 100%;
+    max-width: 840px;
+    height: 100%;
+    min-height: 400px;
+    /* 요청사항에 따른 최소 높이 확보 */
+    background: #fff;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    overflow: hidden;
+    margin: auto;
+    /* 부모가 flex일 때, 내용이 부모보다 크면 상단 잘림 방지 */
+}
+
+.asset-group {
+    margin-bottom: 0;
+    /* space-around에 의해 여백이 자동 결정되므로 제거 */
+    flex-shrink: 1;
+    min-height: 0;
+    padding: 0 8px;
+}
+
+.asset-group:last-child {
+    margin-bottom: 0;
+}
+
+.asset-group-title {
+    font-size: min(2vh, 13px);
+    font-weight: 800;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: min(1.5vh, 12px);
+}
+
+.asset-group-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, #f1f5f9, transparent);
+}
+
+.asset-items {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    /* 4열 고정하여 높이 폭발 방지 */
+    gap: min(1.5vh, 12px);
+}
+
+.asset-item {
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: min(1vh, 8px) 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 1;
+}
+
+.asset-icon {
+    font-size: min(3vh, 20px);
+}
+
+.asset-name {
+    font-size: min(1.8vh, 12px);
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.asset-item:hover {
+    border-color: var(--action-pink);
+    background: #fff5f9;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px -5px rgba(244, 63, 94, 0.1);
+}
+
+.asset-item.selected {
+    border-color: var(--action-pink);
+    background: #fff1f2;
+    transform: none;
+    outline: 2px solid var(--action-pink);
+    outline-offset: -2px;
+}
+
+.asset-item.selected .asset-name {
+    color: var(--action-pink);
+    font-weight: 800;
+}
+
+.asset-icon {
+    font-size: 24px;
+}
+
+.asset-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+}
+
+@keyframes fadeInMode {
+    from {
+        opacity: 0;
+        transform: scale(0.97) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
     }
 }
