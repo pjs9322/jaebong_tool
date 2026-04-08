@@ -1,12 +1,123 @@
-/* --- VIEWER --- */
 .viewer-layout {
     flex: 1;
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
     background: #e5e7eb;
+    overflow: hidden;
 }
 
+.view-action-sidebar {
+    flex: 1;
+    background: #fff;
+    border-left: 1px solid #e5e7eb;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.side-action-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: 0.5px;
+}
+
+.side-action-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.btn-side-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 30px;
+    min-height: 280px;
+    height: 30%;
+    /* 400px 너비 대비 약 3:2 비율 (내부 좌우 여백 제외 실면적) */
+    background: #f1f5f9;
+    border: 2px solid #e2e8f0;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: center;
+    width: 100%;
+}
+
+.btn-side-action.blue {
+    background: #85a6d6;
+    /* 파스텔 블루 */
+    border-color: #dbeafe;
+}
+
+.btn-side-action.pink {
+    background: #dd600b;
+    /* 파스텔 로즈 */
+    border-color: #ffe4e6;
+}
+
+.btn-side-action:hover {
+    background: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 15px 35px rgba(59, 130, 246, 0.15);
+    transform: translateY(-8px);
+}
+
+.btn-side-action.pink:hover {
+    border-color: var(--action-pink);
+    box-shadow: 0 15px 35px rgba(244, 63, 94, 0.2);
+}
+
+
+.side-icon {
+    font-size: 70px;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.side-text {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.side-text strong {
+    font-size: 30px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.5px;
+}
+
+.btn-side-action:hover strong {
+    color: #1e293b;
+}
+
+.side-text span {
+    font-size: 20px;
+    color: #fff;
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.btn-side-action:hover span {
+    color: #64748b;
+}
+
+@media screen and (max-width: 1024px) {
+    .view-action-sidebar {
+        width: 320px;
+        padding: 20px;
+    }
+}
+
+
 .view-main {
+    flex: 1.5;
     overflow-y: auto;
     padding: 40px;
     display: flex;
@@ -25,8 +136,24 @@
     padding: 60px;
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 30px;
     flex-shrink: 0;
+}
+
+/* --- Maintenance Report Info Section --- */
+.view-maint-info {
+    padding-bottom: 30px;
+    border-bottom: 1px solid #111;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.view-maint-item {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    color: #111;
 }
 
 .paper-header {
@@ -115,9 +242,11 @@
     font-weight: 800;
     color: #fff;
     background: #111;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 6px 14px;
+    border-radius: 8px;
 }
+
+
 
 .view-url-container {
     font-size: 13px;
@@ -168,7 +297,12 @@
 .view-memo-num {
     font-weight: 800;
     color: var(--action-pink);
-    min-width: 20px;
+    min-width: 32px;
+}
+
+.view-memo-text {
+    white-space: pre-wrap;
+    flex: 1;
 }
 
 .view-add-req {
@@ -332,14 +466,14 @@
     bottom: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 0, 0, 0.6);
     z-index: 9999;
     display: none;
     /* Flex when active */
     justify-content: center;
     align-items: flex-start;
     /* 상단부터 시작하여 스크롤 용이하게 */
-    padding: 60px 0;
+    padding: 80px 0 150px;
     backdrop-filter: blur(10px);
     overflow-y: auto;
     /* 모달 자체 스크롤 허용 */
@@ -367,13 +501,14 @@
     width: 80vw;
     /* 가로길이 80vw 고정 */
     max-width: 1400px;
-    margin: 0 auto;
+    margin: auto;
     animation: slideUp 0.3s ease-out;
 }
 
 @media (max-width: 768px) {
     .viewer-modal-container {
         width: 95vw;
+        margin: 0 auto;
     }
 }
 
@@ -404,33 +539,56 @@
 /* Annotation Rect */
 .viewer-anno-rect {
     position: absolute;
-    /* border: 2px solid transparent; */
-    border-radius: 4px;
-    background: rgba(244, 63, 94, 0.2);
+    border: 2px solid #ef4444;
+    border-radius: 2px;
+    background: rgba(239, 68, 68, 0.05);
     pointer-events: auto;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+/* 상단 번호 뱃지 (캔버스 디자인 재현) */
+.viewer-anno-rect::before {
+    content: attr(data-num);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
 }
 
 .viewer-anno-rect:hover,
 .viewer-anno-rect.active {
-    opacity: 1;
-    background: rgba(244, 63, 94, 0.4);
-    border-color: #fff;
-    box-shadow: 0 0 15px rgba(244, 63, 94, 0.4);
-    transform: scale(1.005);
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #ef4444;
 }
 
 .viewer-anno-rect.is-purple {
     border-color: #8b5cf6;
-    background: rgba(139, 92, 246, 0.15);
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.viewer-anno-rect.is-purple::before {
+    background: #8b5cf6;
 }
 
 .viewer-anno-rect.is-purple:hover,
 .viewer-anno-rect.is-purple.active {
-    background: rgba(139, 92, 246, 0.4);
-    border-color: #fff;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+    background: rgba(139, 92, 246, 0.2);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 
@@ -446,19 +604,48 @@
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-    width: 280px;
+    width: auto;
+    min-width: 280px;
+    max-width: 50vw;
     pointer-events: none;
     font-size: 13px;
     line-height: 1.5;
     color: #333;
     animation: fadeIn 0.2s ease-out;
+    /* 💡 컨테이너에 pre-wrap이 있으면 템플릿 리터럴의 줄바꿈이 그대로 보일 수 있으므로 제거 */
 }
 
 .viewer-memo-tooltip img {
     width: 100%;
+    max-height: 50vh;
+    object-fit: cover;
+    object-position: top;
     border-radius: 6px;
     margin-top: 10px;
     display: block;
+}
+
+/* 이미지 하단 마스킹 효과 (300px 초과 시에만 작동하도록 로직 수정) */
+.view-memo-img-wrapper {
+    position: relative;
+    overflow: hidden;
+    margin-top: 10px;
+    border-radius: 6px;
+    max-height: 50vh;
+    /* 컨테이너 높이 제한 */
+}
+
+.view-memo-img-wrapper.cropped::after {
+    content: '';
+    position: absolute;
+    /* [핵심] 상단에서 (50vh - 40px) 지점에 고정. 
+       이미지가 해당 높이에 도달하면 딱 하단 40px 영역에 걸쳐 보이게 됨. */
+    top: calc(50vh - 40px);
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.95), transparent);
+    pointer-events: none;
 }
 
 /* Bottom Sheet (Mobile) */
@@ -471,13 +658,18 @@
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
     padding: 24px;
-    padding-bottom: 70px;
+    padding-top: 10px;
+    padding-bottom: 48px;
     z-index: 10002;
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.2);
     display: none;
     visibility: hidden;
+    max-height: 50vh;
+    min-height: 40vh;
+    flex-direction: column;
+    box-sizing: border-box;
 }
 
 .viewer-bottom-sheet.active {
@@ -514,6 +706,9 @@
     font-size: 15px;
     line-height: 1.6;
     color: #333;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
 }
 
 .sheet-content img {
@@ -536,9 +731,48 @@
 
 /* --- Mobile Responsive (Viewer Mode) --- */
 @media screen and (max-width: 768px) {
+    .view-maint-info {
+        padding-bottom: 10px;
+        gap: 8px;
+    }
+
+    .view-maint-item {
+        font-size: 13px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    #btnLandingCreate {
+        display: none !important;
+    }
+
+    .viewer-layout {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .view-action-sidebar {
+        display: none;
+    }
+
+    .btn-side-action {
+        padding: 16px;
+    }
+
+    .side-icon {
+        font-size: 20px;
+    }
+
+    .side-text strong {
+        font-size: 14px;
+    }
+
+    .side-text span {
+        display: none;
+    }
+
     .topbar {
         flex-direction: column;
-        gap: 5px;
         height: auto;
         padding: 10px 16px;
     }
@@ -549,16 +783,11 @@
 
     .top-msg {
         display: none;
-        /* 모바일에서는 긴 안내 메시지 숨김 */
-    }
-
-    #btnCopyLinkViewer {
-        padding: 8px 12px;
-        font-size: 11px;
     }
 
     .view-main {
         padding: 16px;
+        overflow-y: visible;
     }
 
     .view-paper {
@@ -579,7 +808,6 @@
 
     .paper-header img {
         width: 120px;
-        /* 로고 크기 축소 */
     }
 
     .view-content-row {
@@ -591,7 +819,6 @@
 
     .view-info-col {
         display: contents;
-        /* wrapper 역할을 제거하고 직계 자식으로 만듦 */
     }
 
     .view-item-header {
@@ -609,7 +836,8 @@
         order: 3;
     }
 
-    .view-memo-box {
+    .view-memo-box,
+    .view-asset-items {
         order: 4;
     }
 

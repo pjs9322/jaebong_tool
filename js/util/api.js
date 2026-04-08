@@ -52,19 +52,86 @@ export const SyncAPI = {
      * @param {string} editToken 서버에서 발급한 비밀 토큰
      * @param {string} historyJson S.history 배열을 직렬화(JSON)시킨 데이터
      */
-    syncDocument: async (docId, editToken, historyJson) => {
+    syncDocument: async (docId, editToken, historyJson, mainUrl = '') => {
         try {
             console.log('[SyncAPI] syncDocument request with token in body:', editToken);
+            const body = { id: docId, edit_token: editToken, history_json: historyJson };
+            if (mainUrl) body.main_url = mainUrl;
+
             const res = await fetch(`${API_BASE}/docs/sync.php`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ id: docId, edit_token: editToken, history_json: historyJson })
+                body: JSON.stringify(body)
             });
             return await res.json();
         } catch (err) {
             console.error('API Error (syncDocument):', err);
+            return { success: false };
+        }
+    },
+
+    /**
+     * 개별 카드 1개 동기화 (고속 모드)
+     */
+    syncItem: async (docId, editToken, itemUuid, itemJson, isCompleted, sortOrder = 0) => {
+        try {
+            const res = await fetch(`${API_BASE}/docs/sync_item.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id: docId, 
+                    edit_token: editToken, 
+                    action: 'save',
+                    item_uuid: itemUuid,
+                    item_json: itemJson,
+                    is_completed: isCompleted,
+                    sort_order: sortOrder
+                })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('API Error (syncItem):', err);
+            return { success: false };
+        }
+    },
+
+    /**
+     * 개별 카드 1개 삭제
+     */
+    deleteItem: async (docId, editToken, itemUuid) => {
+        try {
+            const res = await fetch(`${API_BASE}/docs/sync_item.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id: docId, 
+                    edit_token: editToken, 
+                    action: 'delete',
+                    item_uuid: itemUuid
+                })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('API Error (deleteItem):', err);
+            return { success: false };
+        }
+    },
+
+    /**
+     * 카드 리스트 순서 일괄 업데이트 (드래그 앤 드롭 정렬)
+     */
+    updateItemOrders: async (docId, editToken, orders) => {
+        try {
+            const res = await fetch(`${API_BASE}/docs/update_orders.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: docId, edit_token: editToken, orders: orders })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('API Error (updateItemOrders):', err);
             return { success: false };
         }
     },
@@ -90,6 +157,41 @@ export const SyncAPI = {
             return await res.json();
         } catch (err) {
             console.error('API Error (uploadImage):', err);
+            return { success: false };
+        }
+    },
+
+    /**
+     * 서버의 물리적인 이미지 파일을 삭제
+     */
+    deleteFiles: async (docId, editToken, urls) => {
+        if (!urls || urls.length === 0) return { success: true };
+        try {
+            const res = await fetch(`${API_BASE}/cleanup.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: docId, edit_token: editToken, mode: 'single', files: urls })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('API Error (deleteFiles):', err);
+            return { success: false };
+        }
+    },
+
+    /**
+     * 특정 문서에 할당된 모든 서버 파일을 삭제 (초기화 시)
+     */
+    cleanupDocument: async (docId, editToken) => {
+        try {
+            const res = await fetch(`${API_BASE}/cleanup.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: docId, edit_token: editToken, mode: 'all' })
+            });
+            return await res.json();
+        } catch (err) {
+            console.error('API Error (cleanupDocument):', err);
             return { success: false };
         }
     }

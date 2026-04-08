@@ -60,6 +60,13 @@ async function startup() {
                 try {
                     const payload = JSON.parse(currDoc.data.history_json || '{"history":[]}');
                     S.history = Array.isArray(payload) ? payload : (payload.history || []);
+                    S.updatedAt = currDoc.data.updated_at; // [추가] 마지막 수정일 동기화
+
+                    // [신규] 저장된 메인 URL 복원
+                    if (currDoc.data.main_url) {
+                        S.maintUrl = currDoc.data.main_url;
+                    }
+
                     if (S.history.length > 0) {
                         GTM.push('workspace_resume', { request_count_total: S.history.length });
                     }
@@ -73,33 +80,24 @@ async function startup() {
 
     // --- 튜토리얼 로직 ---
     const steps = [
-        { el: 'tut-step1-area', title: '이미지 불러오기', desc: '웹사이트의 URL을 직접 입력하거나<br>이미지 파일을 업로드하세요.' },
-        { el: 'step2Panel', title: '화면 수정 표시', desc: '불러온 이미지 위에서 마우스를 드래그해<br>수정할 영역을 박스로 표시하세요.' },
-        { el: 'step3Panel', title: '상세 메모 작성', desc: '박스에 대한 상세 내용을 적고<br>리스트에 저장하세요.' },
-        { el: ['tut-step4-area', 'editorBtns'], title: '리스트 확인 및 웹링크 생성', desc: '생성한 요청사항 리스트를 검토하고<br>웹 링크를 생성하여 공유하세요.' }
+        { el: 'tut-step1-area', title: '1/4 - 홈페이지 요청사항 생성하기', desc: '고치고 싶은 홈페이지 캡쳐 이미지를 불러오거나<br>기타 [🛠️ 홈페이지 다른 문제] 버튼을 클릭하여<br>요청사항을 대기열에 추가하세요' },
+        { el: 'tut-step4-area', title: '2/4 - 요청사항 작성하기', desc: '목록(작성중)에 추가된 요청사항을 선택해<br>작성을 시작해주세요' },
+        { el: ['step2Panel', 'step3Panel'], union: true, title: '3/4 - 요청사항 완성하기', desc: '요청사항 설명 도구를 통해 다양한 요청사항을 작성하고<br>하단의 [저장하기] 버튼을 통해 요청사항을 완성하세요.' },
+        { el: ['tut-step4-area', 'editorBtns'], title: '4/4 - 유지보수 의뢰서 생성하기', desc: '요청사항 목록에 있는 모든 <b>완성 요청</b>이<br>한장의 의뢰서로 생성됩니다.<br><br>우상단의 [🔗 홈페이지 유지보수 의뢰서 생성하기]<br>버튼을 눌러 의뢰서를 생성해 보세요.' }
     ];
 
     function showTutorial(idx) {
         if (idx >= steps.length) {
             UI.tutOverlay.style.display = 'none';
-            localStorage.setItem('tutorialSeen', 'true');
             return;
         }
 
         const tutSpot2 = document.getElementById('tutSpot2');
-
-        if (idx === 0) {
-            UI.tutSpot.style.transition = 'none';
-            tutSpot2.style.transition = 'none';
-            UI.tutCard.style.transition = 'none';
-        }
-
         UI.tutOverlay.style.display = 'block';
 
         const step = steps[idx];
         const targets = Array.isArray(step.el) ? step.el : [step.el];
 
-        // 애니메이션 루프 관리를 위한 전역 변수 (필요 시 startup 바깥으로 이동 가능하나 여기서는 함수 클로저 활용)
         if (!window._tutLoopStarted) {
             window._tutLoopStarted = true;
             const loop = () => {
@@ -112,97 +110,153 @@ async function startup() {
         }
 
         window._updateAllSpotsFunc = () => {
-            const rects = [];
-            targets.forEach((elId, i) => {
-                const target = document.getElementById(elId);
-                if (!target) return;
-                const rect = target.getBoundingClientRect();
-                const spot = i === 0 ? UI.tutSpot : tutSpot2;
+            const m1 = document.getElementById('mask1');
+            const m2 = document.getElementById('mask2');
+            if (!m1 || !m2) return;
 
-                spot.style.opacity = '1';
-                spot.style.width = rect.width + 'px';
-                spot.style.height = rect.height + 'px';
-                spot.style.top = rect.top + 'px';
-                spot.style.left = rect.left + 'px';
-            });
+            const r1 = UI.tutSpot.getBoundingClientRect();
+            m1.setAttribute('x', r1.left);
+            m1.setAttribute('y', r1.top);
+            m1.setAttribute('width', r1.width);
+            m1.setAttribute('height', r1.height);
 
-            // 마스크 구멍 계산
-            const spot1Rect = UI.tutSpot.getBoundingClientRect();
-            if (UI.tutSpot.style.opacity !== '0') rects.push(spot1Rect);
-            
-            if (tutSpot2.style.opacity !== '0' && targets.length > 1) {
-                const spot2Rect = tutSpot2.getBoundingClientRect();
-                rects.push(spot2Rect);
-            }
-
-            if (targets.length === 1) {
-                const rect = UI.tutSpot.getBoundingClientRect();
-                tutSpot2.style.width = rect.width + 'px';
-                tutSpot2.style.height = rect.height + 'px';
-                tutSpot2.style.top = rect.top + 'px';
-                tutSpot2.style.left = rect.left + 'px';
-                tutSpot2.style.opacity = '0';
-            }
-
-            let path = `polygon(0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%`;
-            rects.forEach(r => {
-                const R = 12; const M = 3.5;
-                const pts = [
-                    `${r.left + R}px ${r.top}px`, `${r.right - R}px ${r.top}px`,
-                    `${r.right - M}px ${r.top + M}px`, `${r.right}px ${r.top + R}px`,
-                    `${r.right}px ${r.bottom - R}px`, `${r.right - M}px ${r.bottom - M}px`,
-                    `${r.right - R}px ${r.bottom}px`, `${r.left + R}px ${r.bottom}px`,
-                    `${r.left + M}px ${r.bottom - M}px`, `${r.left}px ${r.bottom - R}px`,
-                    `${r.left}px ${r.top + R}px`, `${r.left + M}px ${r.top + M}px`,
-                    `${r.left + R}px ${r.top}px`
-                ];
-                path += `, ${pts.join(', ')}`;
-            });
-            path += `)`;
-            UI.tutBg.style.clipPath = path;
+            const r2 = tutSpot2.getBoundingClientRect();
+            m2.setAttribute('x', r2.left);
+            m2.setAttribute('y', r2.top);
+            m2.setAttribute('width', r2.width);
+            m2.setAttribute('height', r2.height);
         };
 
-        // 초기 위치 즉시 반영
-        window._updateAllSpotsFunc();
+        const updateSpotStyles = () => {
+            if (step.union) {
+                let minT = Infinity, minL = Infinity, maxB = -Infinity, maxR = -Infinity;
+                targets.forEach(elId => {
+                    const el = document.getElementById(elId);
+                    if (el) {
+                        const r = el.getBoundingClientRect();
+                        minT = Math.min(minT, r.top);
+                        minL = Math.min(minL, r.left);
+                        maxB = Math.max(maxB, r.bottom);
+                        maxR = Math.max(maxR, r.right);
+                    }
+                });
+
+                if (minT !== Infinity) {
+                    const top = minT - 8, left = minL - 8, width = maxR - minL + 16, height = maxB - minT + 16;
+                    UI.tutSpot.style.opacity = '1';
+                    UI.tutSpot.style.top = top + 'px';
+                    UI.tutSpot.style.left = left + 'px';
+                    UI.tutSpot.style.width = width + 'px';
+                    UI.tutSpot.style.height = height + 'px';
+
+                    // 핵심: 보이지 않는 2번 박스도 1번 자리에 대기시켜서 전이 시 부드러운 분리 연출
+                    tutSpot2.style.opacity = '0';
+                    tutSpot2.style.top = top + 'px';
+                    tutSpot2.style.left = left + 'px';
+                    tutSpot2.style.width = width + 'px';
+                    tutSpot2.style.height = height + 'px';
+                }
+            } else {
+                targets.forEach((elId, i) => {
+                    const target = document.getElementById(elId);
+                    if (!target) return;
+                    const rect = target.getBoundingClientRect();
+                    const spot = i === 0 ? UI.tutSpot : tutSpot2;
+                    spot.style.opacity = '1';
+                    spot.style.width = (rect.width + 16) + 'px';
+                    spot.style.height = (rect.height + 16) + 'px';
+                    spot.style.top = (rect.top - 8) + 'px';
+                    spot.style.left = (rect.left - 8) + 'px';
+                });
+
+                // 타겟이 1개일 때도 tutSpot2를 tutSpot1의 위치에 일치시켜두어 자연스러운 이동 준비
+                if (targets.length === 1) {
+                    tutSpot2.style.opacity = '0';
+                    tutSpot2.style.top = UI.tutSpot.style.top;
+                    tutSpot2.style.left = UI.tutSpot.style.left;
+                    tutSpot2.style.width = UI.tutSpot.style.width;
+                    tutSpot2.style.height = UI.tutSpot.style.height;
+                }
+            }
+        };
+
+        if (S.isTutorialOpening) {
+            UI.tutSpot.style.transition = 'none';
+            tutSpot2.style.transition = 'none';
+            UI.tutCard.style.transition = 'none';
+            updateSpotStyles();
+            window._updateAllSpotsFunc();
+            void UI.tutSpot.offsetWidth;
+            UI.tutSpot.style.transition = '';
+            tutSpot2.style.transition = '';
+            UI.tutCard.style.transition = '';
+            S.isTutorialOpening = false;
+        } else {
+            updateSpotStyles();
+        }
 
         UI.tutStep.innerText = `STEP 0${idx + 1}`;
         UI.tutTitle.innerText = step.title;
         UI.tutDesc.innerHTML = step.desc;
         UI.tutNext.innerText = idx === steps.length - 1 ? '시작하기' : '다음';
 
-        let cardTop, cardLeft;
-        cardLeft = window.innerWidth / 2 - 160;
-        cardTop = window.innerHeight / 2 - 100;
+        const cardLeft = window.innerWidth / 2 - 200;
+        const cardTop = window.innerHeight / 2 - 140;
 
         UI.tutCard.style.left = cardLeft + 'px';
         UI.tutCard.style.top = cardTop + 'px';
 
+        UI.tutPrev.style.display = 'flex';
+        UI.tutPrev.disabled = idx === 0;
+
+        // Skip 버튼은 첫 번째 단계에서만 노출 (Back 버튼 위치에 배정)
         if (idx === 0) {
-            void UI.tutSpot.offsetWidth;
-            UI.tutSpot.style.transition = '';
-            tutSpot2.style.transition = '';
-            UI.tutCard.style.transition = '';
+            UI.tutSkip.style.display = 'block';
+            UI.tutPrev.style.display = 'none'; // Back 버튼 숨기고 Skip 노출
+        } else {
+            UI.tutSkip.style.display = 'none';
+            UI.tutPrev.style.display = 'flex';
         }
 
-        GTM.push('tutorial_step', {
-            tutorial_step: idx + 1,
-            step_name: step.title
-        });
+        GTM.push('tutorial_step', { tutorial_step: idx + 1, step_name: step.title });
     }
 
-    if (localStorage.getItem('tutorialSeen') !== 'true') {
-        UI.tutSkip.style.display = 'none'; // 처음 진입 시 스킵 불가
-        GTM.push('tutorial_begin');
-        setTimeout(() => showTutorial(0), 500);
-    } else {
-        UI.tutSkip.style.display = 'block'; // 이미 본 유저는 활성화 상태 세팅
+    // 0단계 인트로 및 전체 흐름 제어
+    const urlParams = new URLSearchParams(window.location.search);
+    const skipIntroParam = urlParams.get('skip_intro') === '1';
+
+    if (localStorage.getItem('tutorialSeen') === 'true') {
+        localStorage.removeItem('tutorialSeen'); // [추가] 기존 잔여 데이터가 있다면 정리 (Task 요청사항)
     }
+
+    if (!skipIntroParam) {
+        UI.introOverlay.style.display = 'flex';
+        GTM.push('tutorial_intro_view');
+    } else {
+        UI.introOverlay.style.display = 'none'; // 명시적으로 숨김 처리
+        UI.tutSkip.style.display = 'block';
+    }
+
+    UI.btnStartTutorial.onclick = () => {
+        UI.introOverlay.style.display = 'none';
+        S.tutIndex = 0;
+        S.isTutorialOpening = true;
+        UI.tutSkip.style.display = 'block';
+        GTM.push('tutorial_begin');
+        showTutorial(0);
+    };
+
+    UI.btnSkipTutorial.onclick = () => {
+        UI.introOverlay.style.display = 'none';
+        UI.tutSkip.style.display = 'block';
+        GTM.push('tutorial_skip_intro');
+    };
+
     let isTutAnimating = false;
     UI.tutNext.onclick = () => {
-        if (isTutAnimating) return; // 애니메이션 중 클릭 방지
-
+        if (isTutAnimating) return;
         isTutAnimating = true;
-        setTimeout(() => { isTutAnimating = false; }, 600); // CSS 트랜지션 시간(0.5s) 고려
+        setTimeout(() => { isTutAnimating = false; }, 600);
 
         const currentIdx = S.tutIndex ?? 0;
         const nextIdx = currentIdx + 1;
@@ -212,14 +266,28 @@ async function startup() {
         }
         showTutorial(nextIdx);
     };
+
+    UI.tutPrev.onclick = () => {
+        if (isTutAnimating) return;
+        isTutAnimating = true;
+        setTimeout(() => { isTutAnimating = false; }, 600);
+
+        const currentIdx = S.tutIndex ?? 0;
+        const prevIdx = Math.max(0, currentIdx - 1);
+        S.tutIndex = prevIdx;
+        GTM.push('tutorial_back', { tutorial_step: prevIdx + 1 });
+        showTutorial(prevIdx);
+    };
+
     UI.tutSkip.onclick = () => {
         UI.tutOverlay.style.display = 'none';
-        localStorage.setItem('tutorialSeen', 'true');
-        GTM.push('tutorial_skip', { tutorial_step: S.tutIndex + 1 });
+        GTM.push('tutorial_skip', { tutorial_step: (S.tutIndex || 0) + 1 });
     };
+
     UI.btnShowTutorial.onclick = () => {
         S.tutIndex = 0;
-        UI.tutSkip.style.display = 'block'; // 버튼을 통해 다시 꺼낼 때는 스킵 활성화
+        S.isTutorialOpening = true;
+        UI.tutSkip.style.display = 'block';
         GTM.push('tutorial_begin', { is_replayed: true });
         showTutorial(0);
     };

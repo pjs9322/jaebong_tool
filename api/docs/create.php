@@ -46,10 +46,13 @@ $sql = " INSERT INTO `g5_jaebong_documents`
             SET `id` = '{$doc_id}',
                 `owner_uuid` = '{$owner_uuid_esc}',
                 `edit_token` = '{$edit_token}',
-                `history_json` = '[]',
                 `created_at` = NOW(),
                 `updated_at` = NOW() ";
 sql_query($sql);
+
+
+
+
 
 echo json_encode([
     'success' => true,

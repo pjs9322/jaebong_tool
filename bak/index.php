@@ -1270,20 +1270,20 @@
 
       // --- 튜토리얼 로직 ---
       const steps = [{
-          el: 'step1Panel',
-          title: '이미지 불러오기',
-          desc: '작업할 홈페이지를 캡처하거나<br>이미지 파일을 업로드하세요.'
-        },
-        {
-          el: 'step2Panel',
-          title: '화면 수정 표시',
-          desc: '불러온 이미지 위에서 마우스를 드래그해<br>수정할 영역을 박스로 표시하세요.'
-        },
-        {
-          el: 'step3Panel',
-          title: '상세 메모 작성',
-          desc: '박스에 대한 상세 내용을 적고<br>리스트에 저장하세요.'
-        }
+        el: 'step1Panel',
+        title: '이미지 불러오기',
+        desc: '작업할 홈페이지를 캡처하거나<br>이미지 파일을 업로드하세요.'
+      },
+      {
+        el: 'step2Panel',
+        title: '화면 수정 표시',
+        desc: '불러온 이미지 위에서 마우스를 드래그해<br>수정할 영역을 박스로 표시하세요.'
+      },
+      {
+        el: 'step3Panel',
+        title: '상세 메모 작성',
+        desc: '박스에 대한 상세 내용을 적고<br>리스트에 저장하세요.'
+      }
       ];
 
       function showTutorial(idx) {

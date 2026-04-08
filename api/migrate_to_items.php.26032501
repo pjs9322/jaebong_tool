@@ -1,0 +1,90 @@
+<?php
+/**
+ * /jaebong/api/migrate_to_items.php
+ * 기존 g5_jaebong_documents.history_json 데이터를 g5_jaebong_items 테이블로 분산 마이그레이션
+ */
+include_once('../../common.php');
+
+header('Content-Type: text/html; charset=utf-8');
+
+// 보안: 관리자 권한 확인 (GnuBoard5 방식)
+// if ($is_admin !== 'super') {
+//     die('최고관리자만 실행할 수 있는 백필 도구입니다.');
+// }
+
+echo "<h1>🚀 기존 데이터 마이그레이션 도구 시작</h1>";
+echo "<p>의뢰서별(History JSON) 데이터를 'g5_jaebong_items' 테이블의 개별 행으로 마이그레이션합니다.</p><hr>";
+
+// 1. 모든 문서 조회
+$sql = " SELECT id, history_json FROM `g5_jaebong_documents` ";
+$result = sql_query($sql);
+
+$total_doc_count = 0;
+$total_item_migrated = 0;
+$total_item_skipped = 0;
+
+if ($result) {
+    while ($row = sql_fetch_array($result)) {
+        $doc_id = $row['id'];
+        $history_raw = trim($row['history_json']);
+        if (!$history_raw) continue;
+
+        $history_data = json_decode($history_raw, true);
+        
+        // 구조 보정: { history: [] } 형태이거나 그냥 [] 배열인 경우 모두 대응
+        $history = isset($history_data['history']) ? $history_data['history'] : (is_array($history_data) ? $history_data : []);
+        
+        if (empty($history)) {
+            continue;
+        }
+
+        $total_doc_count++;
+        echo "<b>📁 의뢰서 ID: " . htmlspecialchars($doc_id) . "</b> 처리 중... (" . count($history) . "건의 요청사항 발견)<br>";
+
+        foreach ($history as $idx => $item) {
+            $item_uuid = isset($item['id']) ? $item['id'] : '';
+            if (!$item_uuid) {
+                // UUID가 없는 예외 케이스 처리 (강제 생성)
+                $item_uuid = $doc_id . '_' . $idx . '_' . time();
+            }
+
+            // 이미 마이그레이션 되었는지 체크
+            $item_uuid_esc = addslashes($item_uuid);
+            $check = sql_fetch(" SELECT id FROM `g5_jaebong_items` WHERE `item_uuid` = '{$item_uuid_esc}' ");
+            
+            if ($check) {
+                $total_item_skipped++;
+                continue;
+            }
+
+            // 마이그레이션 데이터 준비
+            $doc_id_esc = addslashes($doc_id);
+            $item_json_esc = addslashes(json_encode($item, JSON_UNESCAPED_UNICODE));
+            
+            // 필터링용 완성 여부 추출 (undefined는 '완성'으로 간주)
+            $is_comp = (isset($item['isCompleted']) && $item['isCompleted'] === false) ? 0 : 1;
+            
+            // 개별 요청사항(카드) 데이터 삽입
+            $sql_insert = " INSERT INTO `g5_jaebong_items` 
+                            SET `document_id` = '{$doc_id_esc}',
+                                `item_uuid` = '{$item_uuid_esc}',
+                                `item_json` = '{$item_json_esc}',
+                                `is_completed` = '{$is_comp}',
+                                `sort_order` = '{$idx}' ";
+            
+            if (sql_query($sql_insert)) {
+                $total_item_migrated++;
+            }
+        }
+    }
+}
+
+echo "<hr>";
+echo "<h3>✅ 마이그레이션 완료 리포트</h3>";
+echo "<ul>
+    <li>처리한 총 의뢰서 개수: <b>{$total_doc_count}</b>개</li>
+    <li>신규 마이그레이션된 카드: <b style='color:blue;'>{$total_item_migrated}</b>개</li>
+    <li>이미 존재하여 건너뛴 카드: <b>{$total_item_skipped}</b>개</li>
+</ul>";
+echo "<p>이제 새로운 데이터 구조를 사용할 준비가 되었습니다. 다음 단계는 읽기 API(read.php)를 업데이트하는 것입니다.</p>";
+?>

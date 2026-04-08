@@ -1,0 +1,112 @@
+<?php
+/**
+ * /jaebong/api/migrate_assets_to_uuid.php
+ * g5_jaebong_items의 JSON 내 이미지 경로를 g5_jaebong_images의 UUID 구조로 정규화
+ */
+include_once('../../common.php');
+header('Content-Type: text/html; charset=utf-8');
+
+// 최고관리자만 실행 가능
+// if ($is_admin !== 'super') {
+//     die('최고관리자만 실행할 수 있는 에셋 정규화 도구입니다.');
+// }
+
+echo "<h1>🖼️ 에셋 정규화(UUID 기반) 마이그레이션 도구</h1>";
+echo "<p>JSON 내의 긴 이미지 물리 경로를 짧은 UUID 기반 ID로 치환하고 매핑 테이블을 갱신합니다.</p><hr>";
+
+// 1. 모든 아이템(카드) 조회
+$sql = " SELECT id, document_id, item_json FROM `g5_jaebong_items` ";
+$result = sql_query($sql);
+
+$total_migrated = 0;
+$asset_registered = 0;
+
+if ($result) {
+    while ($row = sql_fetch_array($result)) {
+        $item_id = $row['id'];
+        $doc_id = $row['document_id'];
+        $item = json_decode($row['item_json'], true);
+        
+        if (!$item) continue;
+        
+        $changed = false;
+
+        // JSON 내 이미지 경로들을 uuid로 치환하는 전처리 로직
+        // thumb, full, baseImgSrc, annos[].img 모두 체크
+        $fields = ['thumb', 'full', 'baseImgSrc'];
+        foreach ($fields as $f) {
+            if (isset($item[$f]) && !empty($item[$f]) && strpos($item[$f], '/jaebong/uploads/') !== false && strpos($item[$f], 'UUID:') === false) {
+                $url = $item[$f];
+                $url_esc = addslashes($url);
+                $doc_id_esc = addslashes($doc_id);
+                
+                // 1. 이미 등록된 이미지인지 확인
+                $check = sql_fetch(" SELECT image_uuid FROM `g5_jaebong_images` WHERE `url` = '{$url_esc}' ");
+                $uuid = '';
+                
+                if ($check && !empty($check['image_uuid'])) {
+                    $uuid = $check['image_uuid'];
+                } else {
+                    // 2. 신규 등록: UUID 생성 (img_ + 유니크아이디)
+                    $uuid = 'img_' . uniqid();
+                    $uuid_esc = addslashes($uuid);
+                    if ($check) {
+                        sql_query(" UPDATE `g5_jaebong_images` SET `image_uuid` = '{$uuid_esc}' WHERE `url` = '{$url_esc}' ");
+                    } else {
+                        sql_query(" INSERT INTO `g5_jaebong_images` SET `image_uuid` = '{$uuid_esc}', `document_id` = '{$doc_id_esc}', `url` = '{$url_esc}' ");
+                    }
+                    $asset_registered++;
+                }
+                
+                $item[$f] = "UUID:{$uuid}";
+                $changed = true;
+            }
+        }
+        
+        // Annotations 내의 이미지들도 처리
+        if (!empty($item['annos']) && is_array($item['annos'])) {
+            foreach ($item['annos'] as &$anno) {
+                if (isset($anno['img']) && !empty($anno['img']) && strpos($anno['img'], '/jaebong/uploads/') !== false && strpos($anno['img'], 'UUID:') === false) {
+                    $url = $anno['img'];
+                    $url_esc = addslashes($url);
+                    $doc_id_esc = addslashes($doc_id);
+                    
+                    $check = sql_fetch(" SELECT image_uuid FROM `g5_jaebong_images` WHERE `url` = '{$url_esc}' ");
+                    $uuid = '';
+                    
+                    if ($check && !empty($check['image_uuid'])) {
+                        $uuid = $check['image_uuid'];
+                    } else {
+                        $uuid = 'img_' . uniqid();
+                        $uuid_esc = addslashes($uuid);
+                        if ($check) {
+                            sql_query(" UPDATE `g5_jaebong_images` SET `image_uuid` = '{$uuid_esc}' WHERE `url` = '{$url_esc}' ");
+                        } else {
+                            sql_query(" INSERT INTO `g5_jaebong_images` SET `image_uuid` = '{$uuid_esc}', `document_id` = '{$doc_id_esc}', `url` = '{$url_esc}' ");
+                        }
+                        $asset_registered++;
+                    }
+                    
+                    $anno['img'] = "UUID:{$uuid}";
+                    $changed = true;
+                }
+            }
+        }
+
+        // 변경된 경우 에셋 정규화된 JSON으로 업데이트
+        if ($changed) {
+            $new_json_esc = addslashes(json_encode($item, JSON_UNESCAPED_UNICODE));
+            sql_query(" UPDATE `g5_jaebong_items` SET `item_json` = '{$new_json_esc}' WHERE `id` = '{$item_id}' ");
+            $total_migrated++;
+        }
+    }
+}
+
+echo "<hr>";
+echo "<h3>✅ 에셋 정규화 완료 리포트</h3>";
+echo "<ul>
+    <li>치환 처리된 카드 본문: <b>{$total_migrated}</b>개</li>
+    <li>신규 생성 및 연결된 에셋 매핑: <b style='color:blue;'>{$asset_registered}</b>개</li>
+</ul>";
+echo "<p>마지막 단계로, '읽기(read.php)' API를 통해 UUID를 다시 이미지 주소로 풀어주면 모든 작업이 완료됩니다!</p>";
+?>

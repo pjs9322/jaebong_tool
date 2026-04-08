@@ -5,7 +5,7 @@
 import { S } from './store/state.js';
 import { UI, initUI } from './store/elements.js';
 import { SyncAPI } from './util/api.js';
-import { renderViewerContent } from './core/viewer.js';
+import { renderViewerContent, applyPermissionUI } from './core/viewer.js';
 import { GTM } from './util/gtm.js';
 
 async function startup() {
@@ -41,6 +41,12 @@ async function startup() {
     try {
         const payload = JSON.parse(res.data.history_json || '{"history":[]}');
         S.history = Array.isArray(payload) ? payload : (payload.history || []);
+        S.updatedAt = res.data.updated_at; // DB에 저장된 마지막 수정시간 저장
+
+        // [신규] 저장된 메인 URL 복원 (viewMaintInfo 표시용)
+        if (res.data.main_url) {
+            S.maintUrl = res.data.main_url;
+        }
     } catch (e) {
         S.history = [];
     }
@@ -50,37 +56,12 @@ async function startup() {
         request_count_total: S.history.length
     });
 
-    // 소유자 권한 확인 후 버튼 노출
-    const isOwner = res.data.owner_uuid === S.myUuid;
-    if (isOwner) {
-        if (UI.viewerBtns) UI.viewerBtns.style.display = 'flex';
-
-        if (UI.backToEditBtn) {
-            UI.backToEditBtn.onclick = () => {
-                GTM.push('edit_return_from_result');
-                window.location.href = '/jaebong/'; // 파라미터 제외하고 접근하여 에디터 진입
-            };
-        }
-
-        const copyBtn = document.getElementById('btnCopyLinkViewer');
-        if (copyBtn) {
-            copyBtn.onclick = () => {
-                const baseUrl = window.location.origin + window.location.pathname;
-                const urlToCopy = baseUrl.endsWith('/') ? `${baseUrl}?id=${currentId}` : `${baseUrl}/?id=${currentId}`;
-                navigator.clipboard.writeText(urlToCopy).then(() => {
-                    alert('공유 링크가 클립보드에 복사되었습니다!\n(' + urlToCopy + ')');
-                    GTM.push('share', { share_method: 'copy', share_link_id: currentId });
-                }).catch(err => {
-                    alert('링크 복사에 실패했습니다. 수동으로 복사해주세요.\n' + urlToCopy);
-                });
-            };
-        }
-    } else {
-        if (UI.viewerBtns) UI.viewerBtns.style.display = 'none';
-    }
-
     // 뷰어 계층 팝업 렌더링 (공통 엔진 사용)
+    applyPermissionUI();
     renderViewerContent();
+
+    // [구조 개편] 공유 모드(?id=)에서는 편집 권한 관련 버튼 로직을 제거합니다.
+    // 모든 관리 기능은 /jaebong/ 워크스페이스 내부에서만 수행됩니다.
 
     // 검토 완료(하단 도달) 및 스크롤 깊이 추적 로직
     let reviewStarted = false;
